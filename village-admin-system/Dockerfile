@@ -2,6 +2,5 @@
 FROM eclipse-temurin:8-jre
 # use shaded jar produced by maven-shade-plugin
 ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} /app.jar
-EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app.jar"]
+# Docker 已停用。
+# 请使用项目根目录的 start-local.bat 进行本地启动（JRE + MySQL 便携版）。

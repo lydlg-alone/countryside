@@ -15,7 +15,7 @@ import java.util.HashMap;
 
 public class Application {
     // persistence config (environment or defaults)
-    private static final String DB_HOST = System.getenv().getOrDefault("DB_HOST", System.getenv().getOrDefault("MYSQL_HOST", "mysql"));
+    private static final String DB_HOST = System.getenv().getOrDefault("DB_HOST", System.getenv().getOrDefault("MYSQL_HOST", "127.0.0.1"));
     private static final String DB_PORT = System.getenv().getOrDefault("DB_PORT", "3306");
     private static final String DB_NAME = System.getenv().getOrDefault("DB_NAME", "village_db");
     private static final String DB_USER = System.getenv().getOrDefault("DB_USER", "village");

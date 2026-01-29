@@ -1,61 +1,7 @@
 version: '3.8'
 
-services:
-  mysql:
-    image: mysql:8.0
-    container_name: village-mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: village_db
-      MYSQL_USER: village
-      MYSQL_PASSWORD: villagepass
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:6
-    container_name: village-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  app:
-    build:
-      context: ./village-admin-system
-    container_name: village-app
-    ports:
-      - "8080:8080"
-    depends_on:
-      - mysql
-      - redis
-  frontend:
-    image: nginx:stable
-    container_name: village-frontend
-    ports:
-      - "8088:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html:ro
-      - ./frontend/default.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - app
-
-  mock-server:
-    image: node:18
-    container_name: village-mock
-    working_dir: /usr/src/app
+# Docker 已停用。
+# 请使用项目根目录的 start-local.bat 进行本地启动（JRE + MySQL 便携版）。
     volumes:
       - ./mock-server:/usr/src/app:ro
     command: ["npm","start"]

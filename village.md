@@ -129,53 +129,26 @@ village-admin-system
 - 预警：`GET /api/warnings/events`、`POST /api/warnings/rules`
 
 ### 部署与运行（技术栈）
-- Java1.8，构建：Maven/Gradle，数据库：MySQL，缓存：Redis。
-- 容器化：提供 `docker-compose.yml`用于快速部署：包含 app、mysql、redis、nginx（反向代理）。
+- Java1.8，构建：Maven，数据库：MySQL（本地便携版），缓存：Redis（可选）。
+- Docker 已停用，改为本地一键启动脚本（Windows）。
 
 ### 前端开发与本地运行
 
-- 快速启动（推荐，使用 Docker Compose，包含 nginx 反向代理）：
+#### 本地一键启动（Windows）
+1. 将 JRE 解压到 `runtime\jre`（需包含 `bin\java.exe`）。
+2. 将 MySQL 便携版解压到 `runtime\mysql`（需包含 `bin\mysqld.exe`）。
+3. 运行项目根目录 `start-local.bat`。
 
+停止服务：运行 `stop-local.bat`。
+
+#### 前端使用方式
+- 直接打开 `frontend\index.html`。
+- 后端默认地址为 `http://localhost:8080`。
+
+#### 本地开发（可选）
 ```powershell
-# 在项目根目录运行（Windows PowerShell）
-docker compose up -d --build
-# 查看前端容器日志
-docker logs village-frontend --follow
-```
-
-- 访问：在浏览器打开 `http://localhost`。nginx 已配置将 `/api/` 代理到后端服务（容器内主机名 `app:8080`），因此前端直接使用相对路径 `/api/...` 与后端通信，无需修改跨域设置。
-
-- 本地开发（不使用 Docker）：
-	- 直接静态托管（简单快速）：
-
-```powershell
-# 进入 frontend 目录
 cd frontend
-# 使用 Python 简易静态服务器（Python 3）
 python -m http.server 8081
-# 在浏览器访问 http://localhost:8081
 ```
 
-	- 注意：若不使用 nginx 代理，前端相对路径 `/api/` 会指向 `http://localhost:8081/api/`，这通常无法直接访问后端（后端运行在 `http://localhost:8080`），会触发 CORS。两种解决办法：
-		- 在后端启用 CORS（允许来自 `http://localhost:8081` 的请求）；或
-		- 在 `frontend/app.js` 将接口基准地址改为 `http://localhost:8080`（开发时临时使用完整地址）。
-
-- 修改前端请求为相对路径（已在本示例实施）：
-	- 文件：`frontend/app.js`，所有对后端的请求使用 `/api/...`，在容器化环境中通过 nginx 统一代理，便于部署切换与安全策略。
-
-- 常见调试命令：
-
-```powershell
-# 检查容器状态
-docker ps
-# 查看某个容器日志
-docker logs village-app --tail 200
-docker logs village-frontend --tail 200
-# 测试后端健康端点
-Invoke-WebRequest http://localhost/api/ -UseBasicParsing
-```
-
-- 开发建议：
-	- 在本地开发时使用 nginx 代理（Docker Compose）可以避免 CORS 干扰，并模拟生产部署路径；
-	- 若希望热重载，可在 `frontend` 目录使用 Node.js 的开发服务器（例如 `npx live-server` 或基于 `webpack`/`Vite` 的开发模式），并在本地后端启用 CORS 或配置开发代理；
-	- 将后端接口逐步实现为 REST `/api/*`，并在前端通过相对路径调用，生产环境仅需调整 nginx 配置即可。 
+> 注意：若前端使用 `http://localhost:8081` 访问，请确保后端已启用 CORS（当前已启用），或在 `frontend/app.js` 使用 `http://localhost:8080` 作为接口基准地址。
