@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Village 数据库数据编辑工具</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --danger: #dc2626;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px; background: var(--bg); color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    header {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 20px; margin: 0; }
+    .sub { color: var(--muted); font-size: 12px; }
+    .toolbar {
+      display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap;
+    }
+    input, select, button, textarea {
+      font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+      background: #fff;
+    }
+    button { cursor: pointer; background: var(--primary); color: #fff; border-color: var(--primary); }
+    button.secondary { background: #fff; color: var(--text); border-color: var(--border); }
+    button.danger { background: var(--danger); border-color: var(--danger); }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+    .tab { padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; background: #fff; }
+    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .panel { display: none; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .panel.active { display: block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: #f9fafb; }
+    .row-actions { display: flex; gap: 6px; }
+    .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .muted { color: var(--muted); font-size: 12px; }
+    .section-title { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Village 数据库数据编辑工具</h1>
+      <div class="sub">通过后端 API 读取/编辑数据（无需直连数据库）</div>
+    </div>
+    <div class="toolbar">
+      <label>API_BASE
+        <input id="apiBase" value="http://localhost:8080" />
+      </label>
+      <button class="secondary" id="refreshAll">刷新全部</button>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+
+  <section class="panel" id="panel-users">
+    <h3 class="section-title">用户管理</h3>
+    <div class="grid">
+      <input id="userName" placeholder="姓名" />
+      <input id="userRole" placeholder="角色" />
+      <input id="userUsername" placeholder="用户名" />
+      <input id="userPassword" placeholder="密码" />
+      <button id="addUser">新增用户</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>姓名</th><th>角色</th><th>用户名</th><th>密码</th><th>操作</th></tr></thead>
+      <tbody id="usersBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-transactions">
+    <h3 class="section-title">财务交易</h3>
+    <div class="grid">
+      <input id="txDesc" placeholder="描述" />
+      <input id="txAmount" placeholder="金额" />
+      <button id="addTx">新增交易</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>描述</th><th>金额</th><th>时间</th></tr></thead>
+      <tbody id="txBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-warnings">
+    <h3 class="section-title">预警事件</h3>
+    <div class="grid">
+      <input id="warnTitle" placeholder="标题" />
+      <input id="warnMsg" placeholder="内容" />
+      <button id="addWarn">新增预警</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>标题</th><th>内容</th><th>等级</th><th>状态</th><th>触发时间</th><th>操作</th></tr></thead>
+      <tbody id="warnBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-industry">
+    <h3 class="section-title">产业指标</h3>
+    <div class="grid">
+      <input id="metricName" placeholder="指标名称" />
+      <input id="metricValue" placeholder="数值" />
+      <input id="metricUnit" placeholder="单位" />
+      <button id="addMetric">新增指标</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>名称</th><th>数值</th><th>单位</th><th>更新时间</th><th>操作</th></tr></thead>
+      <tbody id="metricBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ai">
+    <h3 class="section-title">AI 记录</h3>
+    <div class="grid">
+      <select id="aiTypeFilter">
+        <option value="">全部</option>
+        <option value="chat">问答</option>
+        <option value="summary">摘要</option>
+        <option value="advice">建议</option>
+      </select>
+      <button class="secondary" id="refreshAi">刷新记录</button>
+    </div>
+    <div class="grid" style="margin-top:8px;">
+      <select id="aiType">
+        <option value="chat">问答</option>
+        <option value="advice">建议</option>
+        <option value="summary">摘要</option>
+      </select>
+      <input id="aiQuestion" placeholder="问题/标题" />
+      <input id="aiAnswer" placeholder="内容" />
+      <button id="addAi">保存记录</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>类型</th><th>问题</th><th>回答</th><th>时间</th><th>操作</th></tr></thead>
+      <tbody id="aiBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops">
+    <h3 class="section-title">运维审计（只读）</h3>
+    <table>
+      <thead><tr><th>ID</th><th>动作</th><th>操作者</th><th>状态</th><th>时间</th></tr></thead>
+      <tbody id="opsBody"></tbody>
+    </table>
+  </section>
+
+  <script>
+    const tabs = [
+      { id: 'users', label: '用户' },
+      { id: 'transactions', label: '财务' },
+      { id: 'warnings', label: '预警' },
+      { id: 'industry', label: '产业' },
+      { id: 'ai', label: 'AI记录' },
+      { id: 'ops', label: '运维审计' }
+    ];
+
+    const apiBaseInput = document.getElementById('apiBase');
+    const refreshAllBtn = document.getElementById('refreshAll');
+    const tabsContainer = document.getElementById('tabs');
+
+    function api(path) { return apiBaseInput.value.replace(/\/$/, '') + path; }
+
+    function setActive(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+      document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tabId}`));
+    }
+
+    tabs.forEach((t, idx) => {
+      const btn = document.createElement('div');
+      btn.className = 'tab' + (idx === 0 ? ' active' : '');
+      btn.dataset.tab = t.id;
+      btn.textContent = t.label;
+      btn.onclick = () => setActive(t.id);
+      tabsContainer.appendChild(btn);
+    });
+    setActive('users');
+
+    async function request(path, options = {}) {
+      const res = await fetch(api(path), { headers: { 'Content-Type': 'application/json' }, ...options });
+      if (!res.ok) throw new Error(await res.text());
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    }
+
+    async function loadUsers() {
+      const body = document.getElementById('usersBody');
+      body.innerHTML = '';
+      const list = await request('/api/users');
+      list.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${u.id}</td><td>${u.name}</td><td>${u.role}</td><td>${u.username || ''}</td><td>${u.password || ''}</td>`;
+        const actionTd = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'row-actions';
+        const editBtn = document.createElement('button');
+        editBtn.className = 'secondary';
+        editBtn.textContent = '编辑';
+        editBtn.onclick = async () => {
+          const name = prompt('姓名', u.name);
+          if (name === null) return;
+          const role = prompt('角色', u.role);
+          if (role === null) return;
+          await request(`/api/users/${u.id}`, { method: 'PUT', body: JSON.stringify({ name, role }) });
+          await loadUsers();
+        };
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '删除';
+        delBtn.onclick = async () => {
+          if (!confirm('确认删除该用户？')) return;
+          await request(`/api/users/${u.id}`, { method: 'DELETE' });
+          await loadUsers();
+        };
+        wrap.append(editBtn, delBtn);
+        actionTd.appendChild(wrap);
+        tr.appendChild(actionTd);
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadTransactions() {
+      const body = document.getElementById('txBody');
+      body.innerHTML = '';
+      const list = await request('/api/finance/transactions');
+      list.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${t.id}</td><td>${t.description}</td><td>${t.amount}</td><td>${t.time || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadWarnings() {
+      const body = document.getElementById('warnBody');
+      body.innerHTML = '';
+      const list = await request('/api/warnings/events');
+      list.forEach(w => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${w.id}</td><td>${w.title}</td><td>${w.msg}</td><td>${w.severity}</td><td>${w.status}</td><td>${w.triggered_at}</td>`;
+        const actionTd = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'row-actions';
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '删除';
+        delBtn.onclick = async () => {
+          if (!confirm('确认删除该预警？')) return;
+          await request(`/api/warnings/events/${w.id}`, { method: 'DELETE' });
+          await loadWarnings();
+        };
+        wrap.appendChild(delBtn);
+        actionTd.appendChild(wrap);
+        tr.appendChild(actionTd);
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadMetrics() {
+      const body = document.getElementById('metricBody');
+      body.innerHTML = '';
+      const list = await request('/api/industry/metrics');
+      list.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${m.id}</td><td>${m.name}</td><td>${m.value}</td><td>${m.unit}</td><td>${m.updated_at || ''}</td>`;
+        const actionTd = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'row-actions';
+        const editBtn = document.createElement('button');
+        editBtn.className = 'secondary';
+        editBtn.textContent = '编辑';
+        editBtn.onclick = async () => {
+          const name = prompt('名称', m.name);
+          if (name === null) return;
+          const value = prompt('数值', m.value);
+          if (value === null) return;
+          const unit = prompt('单位', m.unit);
+          if (unit === null) return;
+          await request(`/api/industry/metrics/${m.id}`, { method: 'PUT', body: JSON.stringify({ name, value, unit }) });
+          await loadMetrics();
+        };
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '删除';
+        delBtn.onclick = async () => {
+          if (!confirm('确认删除该指标？')) return;
+          await request(`/api/industry/metrics/${m.id}`, { method: 'DELETE' });
+          await loadMetrics();
+        };
+        wrap.append(editBtn, delBtn);
+        actionTd.appendChild(wrap);
+        tr.appendChild(actionTd);
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadAiRecords() {
+      const body = document.getElementById('aiBody');
+      body.innerHTML = '';
+      const type = document.getElementById('aiTypeFilter').value;
+      const list = await request(`/api/ai/records${type ? `?type=${encodeURIComponent(type)}` : ''}`);
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.id}</td><td>${r.type || ''}</td><td>${r.question || ''}</td><td>${r.answer || ''}</td><td>${r.created_at || ''}</td>`;
+        const actionTd = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'row-actions';
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '删除';
+        delBtn.onclick = async () => {
+          if (!confirm('确认删除该记录？')) return;
+          await request(`/api/ai/records/${r.id}`, { method: 'DELETE' });
+          await loadAiRecords();
+        };
+        wrap.appendChild(delBtn);
+        actionTd.appendChild(wrap);
+        tr.appendChild(actionTd);
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsAudit() {
+      const body = document.getElementById('opsBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/audit');
+      list.forEach(o => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${o.id}</td><td>${o.action}</td><td>${o.actor}</td><td>${o.status}</td><td>${o.created_at}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    document.getElementById('addUser').onclick = async () => {
+      const name = document.getElementById('userName').value;
+      const role = document.getElementById('userRole').value;
+      const username = document.getElementById('userUsername').value;
+      const password = document.getElementById('userPassword').value;
+      await request('/api/users', { method: 'POST', body: JSON.stringify({ name, role, username, password }) });
+      await loadUsers();
+    };
+
+    document.getElementById('addTx').onclick = async () => {
+      const description = document.getElementById('txDesc').value;
+      const amount = document.getElementById('txAmount').value;
+      await request('/api/finance/transactions', { method: 'POST', body: JSON.stringify({ description, amount }) });
+      await loadTransactions();
+    };
+
+    document.getElementById('addWarn').onclick = async () => {
+      const title = document.getElementById('warnTitle').value;
+      const msg = document.getElementById('warnMsg').value;
+      await request('/api/warnings/events', { method: 'POST', body: JSON.stringify({ title, msg }) });
+      await loadWarnings();
+    };
+
+    document.getElementById('addMetric').onclick = async () => {
+      const name = document.getElementById('metricName').value;
+      const value = document.getElementById('metricValue').value;
+      const unit = document.getElementById('metricUnit').value;
+      await request('/api/industry/metrics', { method: 'POST', body: JSON.stringify({ name, value, unit }) });
+      await loadMetrics();
+    };
+
+    document.getElementById('addAi').onclick = async () => {
+      const type = document.getElementById('aiType').value;
+      const question = document.getElementById('aiQuestion').value;
+      const answer = document.getElementById('aiAnswer').value;
+      await request('/api/ai/records', { method: 'POST', body: JSON.stringify({ type, question, answer }) });
+      await loadAiRecords();
+    };
+
+    document.getElementById('refreshAi').onclick = loadAiRecords;
+
+    refreshAllBtn.onclick = async () => {
+      await Promise.all([
+        loadUsers(),
+        loadTransactions(),
+        loadWarnings(),
+        loadMetrics(),
+        loadAiRecords(),
+        loadOpsAudit()
+      ]);
+    };
+
+    (async () => {
+      try {
+        await refreshAllBtn.onclick();
+      } catch (err) {
+        alert('加载失败：' + err.message);
+      }
+    })();
+  </script>
+</body>
+</html>
