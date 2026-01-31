@@ -150,8 +150,8 @@ village-admin-system
 
 ### 离线包打包流程
 1. 将 JRE/MySQL 安装包放在项目根目录：
-	- OpenJDK8U-jdk_x64_windows_hotspot_8u472b08.msi
-	- mysql-8.0.45-winx64.msi
+	- OpenJDK8U-jre_x64_windows_hotspot_8u472b08.zip（或 OpenJDK8U-jdk_x64_windows_hotspot_8u472b08.zip）
+	- mysql-8.0.45-winx64.zip
 2. 运行 [build-offline.bat](build-offline.bat)，会自动解压到 runtime 目录，并生成 dist/countryside-offline.zip。
 
 ### 离线包运行流程

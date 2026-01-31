@@ -394,9 +394,9 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 80%;
-            max-width: 900px;
-            max-height: 80vh;
+            width: 88%;
+            max-width: 1100px;
+            max-height: 86vh;
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
@@ -430,6 +430,24 @@
         .task-form input, .task-form textarea, .task-form select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
         .task-form textarea { height: 100px; resize: vertical; }
         .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .chart-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+        .chart-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; background: #fff; }
+        .chart-title { font-weight: 600; color: #2d3748; margin-bottom: 8px; }
+        .line-chart { width: 100%; height: 200px; display: block; }
+        .chart-legend { font-size: 12px; color: #6b7280; margin-top: 6px; }
+        .toggle-group { display: inline-flex; gap: 8px; margin: 8px 0 0; }
+        .toggle-group .btn { padding: 6px 10px; font-size: 12px; }
+        .toggle-group .btn.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+        .map-card { background:#f8f9fa; border:1px solid #e0e0e0; border-radius:10px; padding:16px; }
+        .map-toolbar { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+        .map-canvas { position:relative; width:100%; height:420px; background:#fff; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden; cursor: grab; }
+        .map-canvas.dragging { cursor: grabbing; }
+        .map-canvas .map-inner { width:100%; height:100%; transform-origin:center center; position:relative; }
+        .map-svg { width:100%; height:100%; display:block; }
+        .map-label { font-size:14px; fill:#1e293b; font-weight:600; text-shadow:0 1px 2px rgba(255,255,255,0.8); }
+        .map-label.hidden { display:none; }
+        .resident-marker { position:absolute; transform:translate(-50%,-50%) scale(var(--marker-scale, 1)); transform-origin:center center; background:#2563eb; color:#fff; padding:4px 6px; border-radius:6px; font-size:12px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.15); }
+        .resident-marker.hidden { display:none; }
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);
             z-index: 999; display: none;
@@ -491,9 +509,14 @@
             <!-- 左侧导航栏 -->
             <div class="left-nav">
                 <div class="nav-menu">
-                    <div class="nav-item active" data-module="dashboard">
-                        <div class="nav-icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <div class="nav-item active" data-module="home">
+                        <div class="nav-icon"><i class="fas fa-map"></i></div>
                         <div class="nav-text">首页看板</div>
+                    </div>
+
+                    <div class="nav-item" data-module="dashboard">
+                        <div class="nav-icon"><i class="fas fa-tachometer-alt"></i></div>
+                        <div class="nav-text">数据信息</div>
                     </div>
                     
                     <div class="nav-item" data-module="user">
@@ -533,7 +556,7 @@
                     
                     <div class="nav-item" data-module="ops">
                         <div class="nav-icon"><i class="fas fa-shield-alt"></i></div>
-                        <div class="nav-text">运维与审计模块</div>
+                        <div class="nav-text">运维与审计</div>
                     </div>
                 </div>
             </div>
@@ -541,8 +564,30 @@
             <!-- 右侧内容区域 -->
             <div class="right-content">
                 <!-- 首页看板模块 -->
-                <div class="module-content active" id="dashboard">
+                <div class="module-content active" id="home">
                     <div class="module-header">首页看板</div>
+                    <div class="module-description">村落地图与村民信息展示</div>
+                    <div class="map-card">
+                        <div class="map-toolbar">
+                            <button class="btn btn-primary" id="map-load">从数据库导入</button>
+                            <button class="btn btn-secondary" id="map-add-resident">添加村民信息</button>
+                            <button class="btn btn-secondary" id="map-zoom-in">放大</button>
+                            <button class="btn btn-secondary" id="map-zoom-out">缩小</button>
+                            <button class="btn btn-secondary" id="map-reset">重置</button>
+                            <span class="muted" id="map-scale-text">缩放：100%</span>
+                        </div>
+                        <div class="map-canvas">
+                            <div class="map-inner" id="map-inner">
+                                <svg id="map-svg" class="map-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet"></svg>
+                            </div>
+                        </div>
+                        <div class="muted" id="map-hint" style="margin-top:8px;">分级显示：边界 → 区域名称 → 村民信息</div>
+                    </div>
+                </div>
+
+                <!-- 首页看板模块 -->
+                <div class="module-content" id="dashboard">
+                    <div class="module-header">数据信息</div>
                     <div class="module-description">系统概览和核心数据指标展示</div>
                     
                     <div class="sub-modules">
@@ -557,10 +602,9 @@
                                 展示关键指标和系统运行状态
                             </div>
                             <ul class="sub-module-features">
-                                <li>今日申报：24项</li>
-                                <li>待处理预警：3条</li>
-                                <li>积分待审核：12项</li>
-                                <li>反馈未回复：5条</li>
+                                <li>财务信息：本月收支概览</li>
+                                <li>产业信息：关键指标趋势</li>
+                                <li>待处理任务信息：待办事项统计</li>
                             </ul>
                             <div class="sub-module-actions">
                                 <button class="btn btn-primary" data-open="finance" data-panel="dashboard-overview">查看详情</button>
@@ -858,39 +902,6 @@
                         </div>
                     </div>
                     
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>预警时间</th>
-                                <th>预警类型</th>
-                                <th>严重程度</th>
-                                <th>触发规则</th>
-                                <th>处置状态</th>
-                                <th>负责人</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>2024-01-29 14:30</td>
-                                <td>森林防火</td>
-                                <td><span class="status-badge status-warning">高危</span></td>
-                                <td>温度异常升高</td>
-                                <td><span class="status-badge status-pending">处置中</span></td>
-                                <td>文霞</td>
-                                <td><button class="btn btn-primary">处理</button></td>
-                            </tr>
-                            <tr>
-                                <td>2024-01-29 13:15</td>
-                                <td>气象预警</td>
-                                <td><span class="status-badge status-warning">中危</span></td>
-                                <td>大风橙色预警</td>
-                                <td><span class="status-badge status-completed">已处理</span></td>
-                                <td>李慧颖</td>
-                                <td><button class="btn btn-secondary">详情</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>        
                 
                 <!-- 基层治理与任务模块 -->
@@ -1261,7 +1272,7 @@
 
                                 <!-- 运维与审计模块 -->
                                 <div class="module-content" id="ops">
-                                    <div class="module-header">运维与审计模块</div>
+                                    <div class="module-header">运维与审计</div>
                                     <div class="module-description">系统监控、日志管理、备份/恢复、数据清理、审计链路</div>
                     
                                     <div class="sub-modules">
@@ -1379,6 +1390,8 @@
     </div>
 
     <script>
+        const API_BASE = 'http://localhost:8080';
+
         // 导航项点击效果
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function() {
@@ -1397,8 +1410,385 @@
                 // 显示对应的模块内容
                 const moduleId = this.getAttribute('data-module');
                 document.getElementById(moduleId).classList.add('active');
+                if (moduleId === 'home') {
+                    loadMapData();
+                }
             });
         });
+
+        // 首页看板地图逻辑
+        const mapSvg = document.getElementById('map-svg');
+        const mapInner = document.getElementById('map-inner');
+        const mapScaleText = document.getElementById('map-scale-text');
+        const mapHint = document.getElementById('map-hint');
+        const mapCanvas = document.querySelector('.map-canvas');
+        const ONLINE_MAP_URL = 'https://geo.datav.aliyun.com/areas_v3/bound/430302.json';
+        const MAP_MIN_SCALE = 0.5;
+        const MAP_MAX_SCALE = 20;
+        const RESIDENT_VISIBLE_SCALE = 4.0;
+        let mapScale = 1;
+        let mapPanX = 0;
+        let mapPanY = 0;
+        let isDraggingMap = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragOriginX = 0;
+        let dragOriginY = 0;
+        let residentMarkers = [];
+        let addResidentMode = false;
+        const residentStore = new Map();
+        let mapLabels = [];
+
+        function updateMapLayerInfo(){
+            if (mapScale < 1.2){
+                mapHint.textContent = '当前层级：边界视图';
+            } else if (mapScale < RESIDENT_VISIBLE_SCALE){
+                mapHint.textContent = '当前层级：区域名称视图';
+            } else {
+                mapHint.textContent = '当前层级：村民信息视图';
+            }
+        }
+
+        function applyMapTransform(){
+            mapInner.style.transform = `translate(${mapPanX}px, ${mapPanY}px) scale(${mapScale})`;
+        }
+
+        function setMapScale(scale){
+            mapScale = Math.max(MAP_MIN_SCALE, Math.min(scale, MAP_MAX_SCALE));
+            applyMapTransform();
+            mapScaleText.textContent = `缩放：${Math.round(mapScale*100)}%`;
+            const showLabels = mapScale >= 1.2;
+            const showResidents = mapScale >= RESIDENT_VISIBLE_SCALE;
+            mapLabels.forEach(el => el.classList.toggle('hidden', !showLabels));
+            residentMarkers.forEach(el => el.classList.toggle('hidden', !showResidents));
+            if (mapInner){
+                const markerScale = Math.min(1, Math.max(0.6, 1 / Math.pow(mapScale, 0.7)));
+                mapInner.style.setProperty('--marker-scale', markerScale.toFixed(3));
+            }
+            updateMapLayerInfo();
+        }
+
+        function renderGeoJson(geo){
+            if(!mapSvg) return;
+            mapSvg.innerHTML = '';
+            mapLabels = [];
+            if(!geo || geo.type !== 'FeatureCollection'){
+                mapSvg.innerHTML = '<text x="20" y="30" fill="#999">未找到地图数据</text>';
+                return;
+            }
+            const paths = [];
+            let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+            geo.features.forEach(f=>{
+                const g = f.geometry;
+                const coordsList = g.type === 'Polygon' ? [g.coordinates] : (g.type === 'MultiPolygon' ? g.coordinates : []);
+                coordsList.forEach(poly=>{
+                    poly.forEach(ring=>{
+                        ring.forEach(([x,y])=>{
+                            minX = Math.min(minX,x); minY = Math.min(minY,y);
+                            maxX = Math.max(maxX,x); maxY = Math.max(maxY,y);
+                        });
+                    });
+                });
+            });
+            const width = Math.max(maxX-minX,1);
+            const height = Math.max(maxY-minY,1);
+            const scaleX = 1000/width; const scaleY = 600/height;
+            geo.features.forEach(f=>{
+                const g = f.geometry;
+                const coordsList = g.type === 'Polygon' ? [g.coordinates] : (g.type === 'MultiPolygon' ? g.coordinates : []);
+                coordsList.forEach(poly=>{
+                    poly.forEach(ring=>{
+                        const d = ring.map(([x,y],i)=>{
+                            const px = (x-minX)*scaleX;
+                            const py = 600 - (y-minY)*scaleY;
+                            return `${i===0?'M':'L'}${px},${py}`;
+                        }).join(' ') + ' Z';
+                        paths.push(`<path d="${d}" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>`);
+                    });
+                });
+            });
+            mapSvg.innerHTML = paths.join('');
+
+            const labelFragments = [];
+            geo.features.forEach(f=>{
+                const props = f.properties || {};
+                const name = props.name || '区域';
+                const center = props.center || props.centroid;
+                if (!center || center.length < 2) return;
+                const px = (center[0]-minX)*scaleX;
+                const py = 600 - (center[1]-minY)*scaleY;
+                labelFragments.push(`<text class="map-label" x="${px}" y="${py}" text-anchor="middle">${name}</text>`);
+            });
+            if (labelFragments.length){
+                mapSvg.innerHTML += labelFragments.join('');
+                mapLabels = Array.from(mapSvg.querySelectorAll('.map-label'));
+                const showLabels = mapScale >= 1.2;
+                mapLabels.forEach(el => el.classList.toggle('hidden', !showLabels));
+            }
+        }
+
+        function renderResidents(list){
+            residentMarkers.forEach(el => el.remove());
+            residentMarkers = [];
+            residentStore.clear();
+            if(!mapInner) return;
+            (list || []).forEach(r=>{
+                const el = createResidentMarker(r);
+                mapInner.appendChild(el);
+                residentMarkers.push(el);
+                residentStore.set(String(r.id || ''), r);
+            });
+        }
+
+        function createResidentMarker(resident){
+            const el = document.createElement('div');
+            el.className = 'resident-marker' + (mapScale >= RESIDENT_VISIBLE_SCALE ? '' : ' hidden');
+            el.textContent = `${resident.name}｜${resident.address}`;
+            const x = Number(resident.x || 0);
+            const y = Number(resident.y || 0);
+            el.style.left = `${(x/1000)*100}%`;
+            el.style.top = `${(y/600)*100}%`;
+            if (resident.id != null) {
+                el.dataset.id = String(resident.id);
+            }
+            el.addEventListener('click', (evt)=>{
+                evt.stopPropagation();
+                openResidentEditor(resident, el);
+            });
+            return el;
+        }
+
+        function addResidentMarker(resident){
+            if(!mapInner) return;
+            const el = createResidentMarker(resident);
+            mapInner.appendChild(el);
+            residentMarkers.push(el);
+            if (resident.id != null) {
+                residentStore.set(String(resident.id), resident);
+            }
+        }
+
+        function openResidentEditor(resident, markerEl){
+            const container = document.getElementById('sub-panel-container');
+            const overlay = document.getElementById('sub-panel-overlay');
+            document.getElementById('sub-panel-title').textContent = '村民信息编辑';
+            document.getElementById('sub-panel-content').innerHTML = `
+                <div class="sub-panel-section">
+                    <form class="task-form" id="resident-edit-form">
+                        <div class="form-group"><label>姓名</label><input name="name" type="text" value="${resident.name || ''}" required></div>
+                        <div class="form-group"><label>地址</label><input name="address" type="text" value="${resident.address || ''}"></div>
+                        <div class="form-group"><label>电话</label><input name="phone" type="text" value="${resident.phone || ''}"></div>
+                        <div class="form-group"><label>X</label><input name="x" type="number" value="${resident.x || 0}" readonly></div>
+                        <div class="form-group"><label>Y</label><input name="y" type="number" value="${resident.y || 0}" readonly></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">保存</button>
+                            <button type="button" class="btn btn-secondary" id="resident-cancel">取消</button>
+                            <button type="button" class="btn btn-secondary" id="resident-delete">删除</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            container.style.display = 'flex';
+            overlay.style.display = 'block';
+            document.getElementById('resident-cancel').addEventListener('click', hideSubPanel);
+            document.getElementById('resident-edit-form').addEventListener('submit', async (e)=>{
+                e.preventDefault();
+                const form = e.target;
+                const payload = {
+                    name: form.name.value.trim() || '村民',
+                    address: form.address.value.trim(),
+                    phone: form.phone.value.trim(),
+                    x: resident.x,
+                    y: resident.y
+                };
+                try{
+                    const r = await fetch(API_BASE + '/api/residents/' + resident.id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                    if(!r.ok) throw new Error('保存失败');
+                    resident.name = payload.name;
+                    resident.address = payload.address;
+                    resident.phone = payload.phone;
+                    if(markerEl){ markerEl.textContent = `${resident.name}｜${resident.address}`; }
+                    residentStore.set(String(resident.id), resident);
+                    hideSubPanel();
+                }catch(err){
+                    alert('保存失败，请稍后重试');
+                }
+            });
+            document.getElementById('resident-delete').addEventListener('click', async ()=>{
+                if(!confirm('确认删除该村民信息？')) return;
+                try{
+                    const r = await fetch(API_BASE + '/api/residents/' + resident.id, {method:'DELETE'});
+                    if(!r.ok && r.status !== 204) throw new Error('删除失败');
+                    if(markerEl){ markerEl.remove(); }
+                    residentMarkers = residentMarkers.filter(el => el !== markerEl);
+                    residentStore.delete(String(resident.id));
+                    hideSubPanel();
+                }catch(err){
+                    alert('删除失败，请稍后重试');
+                }
+            });
+        }
+
+        function openResidentCreate(x, y){
+            const container = document.getElementById('sub-panel-container');
+            const overlay = document.getElementById('sub-panel-overlay');
+            document.getElementById('sub-panel-title').textContent = '新增村民信息';
+            document.getElementById('sub-panel-content').innerHTML = `
+                <div class="sub-panel-section">
+                    <form class="task-form" id="resident-create-form">
+                        <div class="form-group"><label>姓名</label><input name="name" type="text" placeholder="请输入姓名" required></div>
+                        <div class="form-group"><label>地址</label><input name="address" type="text" placeholder="请输入地址"></div>
+                        <div class="form-group"><label>电话</label><input name="phone" type="text" placeholder="请输入电话"></div>
+                        <div class="form-group"><label>X</label><input name="x" type="number" value="${x}" readonly></div>
+                        <div class="form-group"><label>Y</label><input name="y" type="number" value="${y}" readonly></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">保存</button>
+                            <button type="button" class="btn btn-secondary" id="resident-create-cancel">取消</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            container.style.display = 'flex';
+            overlay.style.display = 'block';
+            document.getElementById('resident-create-cancel').addEventListener('click', ()=>{
+                hideSubPanel();
+            });
+            document.getElementById('resident-create-form').addEventListener('submit', async (e)=>{
+                e.preventDefault();
+                const form = e.target;
+                const payload = {
+                    name: form.name.value.trim() || '村民',
+                    address: form.address.value.trim(),
+                    phone: form.phone.value.trim(),
+                    x,
+                    y
+                };
+                try{
+                    const r = await fetch(API_BASE + '/api/residents', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                    if(!r.ok) throw new Error('保存失败');
+                    const saved = await r.json();
+                    addResidentMarker(saved);
+                    hideSubPanel();
+                }catch(err){
+                    alert('保存失败，请稍后重试');
+                }
+            });
+        }
+
+        async function loadMapData(){
+            let mapData = null;
+            let residents = [];
+            let mapError = '';
+            let residentsError = '';
+            try{
+                const dbMapRes = await fetch(API_BASE + '/api/map', {cache:'no-store'}).catch(()=>null);
+                if (dbMapRes && dbMapRes.ok) {
+                    mapData = await dbMapRes.json();
+                }
+                if (!mapData || !mapData.content) {
+                    const onlineRes = await fetch(ONLINE_MAP_URL, {cache:'no-store'}).catch(()=>null);
+                    if (onlineRes && onlineRes.ok) {
+                        mapData = await onlineRes.json();
+                    } else {
+                        mapError = onlineRes ? `在线地图返回 ${onlineRes.status}` : '在线地图请求失败';
+                    }
+                }
+                try{
+                    const res = await fetch(API_BASE + '/api/residents', {cache:'no-store'});
+                    if(res.ok){ residents = await res.json(); }
+                    else { residentsError = `居民接口返回 ${res.status}`; }
+                } catch(e){
+                    residentsError = '居民接口请求失败';
+                }
+                let geo = null;
+                if (mapData && mapData.type) {
+                    geo = mapData;
+                } else if (mapData && typeof mapData.content === 'object') {
+                    geo = mapData.content;
+                } else if (mapData && typeof mapData.content === 'string') {
+                    try { geo = JSON.parse(mapData.content || '{}'); } catch(e) { geo = null; }
+                }
+                if (!geo){
+                    if(mapSvg) mapSvg.innerHTML = '<text x="20" y="30" fill="#999">地图数据解析失败</text>';
+                    if(mapHint) mapHint.textContent = mapError || '地图数据解析失败，请确认后端返回内容';
+                    return;
+                }
+                renderGeoJson(geo);
+                renderResidents(residents || []);
+                if(mapHint) {
+                    if (mapError || residentsError) {
+                        mapHint.textContent = [mapError, residentsError].filter(Boolean).join('；');
+                    } else {
+                        updateMapLayerInfo();
+                    }
+                }
+            } catch(e){
+                if(mapSvg) mapSvg.innerHTML = '<text x="20" y="30" fill="#999">地图加载失败</text>';
+                if(mapHint) mapHint.textContent = `地图加载失败：${e && e.message ? e.message : '请求异常'}`;
+            }
+        }
+
+        document.getElementById('map-load')?.addEventListener('click', loadMapData);
+        document.getElementById('map-add-resident')?.addEventListener('click', ()=>{
+            addResidentMode = true;
+            if(mapHint) mapHint.textContent = '点击地图位置添加村民信息';
+        });
+        document.getElementById('map-zoom-in')?.addEventListener('click', ()=>setMapScale(mapScale + 0.25));
+        document.getElementById('map-zoom-out')?.addEventListener('click', ()=>setMapScale(mapScale - 0.25));
+        document.getElementById('map-reset')?.addEventListener('click', ()=>{
+            mapScale = 1;
+            mapPanX = 0;
+            mapPanY = 0;
+            applyMapTransform();
+            setMapScale(1);
+        });
+
+        if(mapCanvas){
+            mapCanvas.addEventListener('wheel', (e)=>{
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.15 : 0.15;
+                setMapScale(mapScale + delta);
+            }, {passive:false});
+
+            mapCanvas.addEventListener('mousedown', (e)=>{
+                isDraggingMap = true;
+                mapCanvas.classList.add('dragging');
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                dragOriginX = mapPanX;
+                dragOriginY = mapPanY;
+            });
+
+            mapCanvas.addEventListener('click', (e)=>{
+                if(!addResidentMode) return;
+                if(!mapInner) return;
+                const rect = mapInner.getBoundingClientRect();
+                const px = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const py = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+                const x = Math.round(px * 1000);
+                const y = Math.round(py * 600);
+                openResidentCreate(x, y);
+                addResidentMode = false;
+                updateMapLayerInfo();
+            });
+
+            window.addEventListener('mousemove', (e)=>{
+                if(!isDraggingMap) return;
+                const dx = e.clientX - dragStartX;
+                const dy = e.clientY - dragStartY;
+                mapPanX = dragOriginX + dx;
+                mapPanY = dragOriginY + dy;
+                applyMapTransform();
+            });
+
+            window.addEventListener('mouseup', ()=>{
+                if(!isDraggingMap) return;
+                isDraggingMap = false;
+                mapCanvas.classList.remove('dragging');
+            });
+        }
+
+        setMapScale(1);
         
         // 登录逻辑
         const loginPage = document.getElementById('login-page');
@@ -1426,6 +1816,7 @@
                 userRoleEl.textContent = data.user?.role || '';
                 loginPage.style.display = 'none';
                 appPage.style.display = 'flex';
+                loadMapData();
             }catch(err){
                 loginError.textContent = '登录失败，请检查账号或密码';
             }
@@ -1446,6 +1837,7 @@
             localStorage.setItem('userUsername', localStorage.getItem('userUsername') || 'admin');
             loginPage.style.display = 'none';
             appPage.style.display = 'flex';
+            loadMapData();
         }else{
             loginPage.style.display = 'flex';
             appPage.style.display = 'none';
@@ -1556,7 +1948,6 @@
         }
 
         // 子面板管理函数
-        const API_BASE = 'http://localhost:8080';
         const panelTitles = {
             'dashboard-overview': '数据概览详情',
             'warning-handle': '预警处理',
@@ -1630,6 +2021,8 @@
                         <h4>${title}</h4>
                         <form class="task-form" id="user-add-form">
                             <div class="form-group"><label>姓名</label><input name="name" type="text" placeholder="请输入姓名" required></div>
+                            <div class="form-group"><label>用户名</label><input name="username" type="text" placeholder="登录账号（可选）"></div>
+                            <div class="form-group"><label>密码</label><input name="password" type="text" placeholder="初始密码（可选）"></div>
                             <div class="form-group"><label>角色</label><input name="role" type="text" placeholder="如：管理员"></div>
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">新增用户</button>
@@ -1637,8 +2030,8 @@
                             </div>
                         </form>
                         <table class="data-table">
-                            <thead><tr><th>ID</th><th>姓名</th><th>角色</th><th>操作</th></tr></thead>
-                            <tbody id="panel-users-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                            <thead><tr><th>ID</th><th>姓名</th><th>用户名</th><th>密码</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody id="panel-users-body"><tr><td colspan="7">加载中...</td></tr></tbody>
                         </table>
                     </div>
                 `;
@@ -1647,7 +2040,10 @@
                 return `
                     <div class="sub-panel-section">
                         <h4>${title}</h4>
-                        <p class="muted">支持 CSV：每行格式为 姓名,角色（可选）。</p>
+                        <p class="muted">支持 CSV：每行格式为 姓名,角色,用户名,密码（可选）。</p>
+                        <div class="sub-module-actions" style="margin-bottom:10px;">
+                            <button class="btn btn-secondary" id="user-import-template">下载模板</button>
+                        </div>
                         <form class="task-form" id="user-import-form">
                             <div class="form-group"><label>选择 CSV 文件</label><input name="file" type="file" accept=".csv" required></div>
                             <div class="form-actions">
@@ -1655,17 +2051,126 @@
                                 <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
                             </div>
                         </form>
+                        <div class="sub-panel-section">
+                            <h4>导入预览</h4>
+                            <table class="data-table">
+                                <thead><tr><th>姓名</th><th>角色</th><th>用户名</th><th>密码</th><th>结果</th></tr></thead>
+                                <tbody id="panel-import-preview"><tr><td colspan="5">暂无预览</td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
                 `;
             }
-            if(panelId === 'user-roles' || panelId === 'user-permissions' || panelId === 'user-login-logs' || panelId === 'user-login-settings'){
+            if(panelId === 'user-login-settings'){
                 return `
                     <div class="sub-panel-section">
                         <h4>${title}</h4>
+                        <form class="task-form" id="login-settings-form">
+                            <div class="form-group"><label><input type="checkbox" name="captcha" checked> 启用登录验证码</label></div>
+                            <div class="form-group"><label><input type="checkbox" name="mfa"> 启用双因子认证</label></div>
+                            <div class="form-group"><label><input type="checkbox" name="lock"> 连续失败自动锁定</label></div>
+                            <div class="form-group"><label>最大失败次数</label><input name="maxFail" type="number" value="5" min="1" max="10"></div>
+                            <div class="form-group"><label><input type="checkbox" name="remember" checked> 允许记住登录</label></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">保存设置</button>
+                                <button type="button" class="btn btn-secondary" id="login-settings-reset">恢复默认</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+            }
+            if(panelId === 'user-login-logs'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-actions" style="margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+                            <input id="login-log-keyword" type="text" placeholder="搜索姓名/账号" style="padding:6px;border:1px solid #e0e0e0;border-radius:4px;">
+                            <select id="login-log-status" style="padding:6px;border:1px solid #e0e0e0;border-radius:4px;">
+                                <option value="">全部状态</option>
+                                <option value="成功">成功</option>
+                                <option value="失败">失败</option>
+                            </select>
+                            <button class="btn btn-primary" id="login-log-refresh">刷新</button>
+                            <button class="btn btn-secondary" id="login-log-export">导出</button>
+                        </div>
                         <table class="data-table">
-                            <thead><tr><th>ID</th><th>姓名</th><th>角色</th></tr></thead>
-                            <tbody id="panel-users-body"><tr><td colspan="3">加载中...</td></tr></tbody>
+                            <thead><tr><th>时间</th><th>姓名</th><th>账号</th><th>IP</th><th>状态</th></tr></thead>
+                            <tbody id="panel-login-logs-body"><tr><td colspan="5">加载中...</td></tr></tbody>
                         </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'user-roles'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="role-add-form">
+                            <div class="form-group"><label>角色名称</label><input name="roleName" type="text" placeholder="如：网格员" required></div>
+                            <div class="form-group"><label>角色描述</label><input name="roleDesc" type="text" placeholder="用于权限识别"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">新增角色</button>
+                                <button type="button" class="btn btn-secondary" id="role-reset">清空</button>
+                            </div>
+                        </form>
+                        <table class="data-table">
+                            <thead><tr><th>角色</th><th>描述</th><th>成员数</th><th>操作</th></tr></thead>
+                            <tbody id="panel-roles-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'user-permissions'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="form-group">
+                            <label>选择角色</label>
+                            <select id="permission-role" style="padding:6px;border:1px solid #e0e0e0;border-radius:4px;"></select>
+                        </div>
+                        <div id="permission-list" class="sub-module-features" style="margin-top:10px;"></div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="permission-save">保存权限</button>
+                            <button class="btn btn-secondary" id="permission-reset">重置</button>
+                        </div>
+                    </div>
+                `;
+            }
+            if(panelId === 'dashboard-overview'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-description">展示财务信息、产业信息与待处理任务信息的概览。</div>
+                        <ul class="sub-module-features">
+                            <li>财务信息：按时间变化的收支趋势</li>
+                            <li>产业信息：指标随时间变化趋势</li>
+                            <li>待处理任务信息：预警/待办统计</li>
+                        </ul>
+                        <div class="chart-grid" style="margin-top:12px;">
+                            <div class="chart-card">
+                                <div class="chart-title">财务信息（近7次）</div>
+                                <div class="toggle-group" id="finance-toggle">
+                                    <button class="btn btn-secondary active" data-period="month">按月</button>
+                                    <button class="btn btn-secondary" data-period="week">按周</button>
+                                    <button class="btn btn-secondary" data-period="year">按年</button>
+                                </div>
+                                <svg id="finance-line" class="line-chart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+                                <div class="chart-legend" id="finance-legend">加载中...</div>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-title">产业信息（近7条）</div>
+                                <div class="toggle-group" id="industry-toggle">
+                                    <button class="btn btn-secondary active" data-period="month">按月</button>
+                                    <button class="btn btn-secondary" data-period="week">按周</button>
+                                    <button class="btn btn-secondary" data-period="year">按年</button>
+                                </div>
+                                <svg id="industry-line" class="line-chart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+                                <div class="chart-legend" id="industry-legend">加载中...</div>
+                            </div>
+                        </div>
+                        <div class="chart-card" style="margin-top:12px;">
+                            <div class="chart-title">待处理任务信息</div>
+                            <div id="task-summary" class="muted">加载中...</div>
+                        </div>
                     </div>
                 `;
             }
@@ -1676,6 +2181,13 @@
                         <form class="task-form" id="finance-add-form">
                             <div class="form-group"><label>说明</label><input name="desc" type="text" placeholder="请输入说明" required></div>
                             <div class="form-group"><label>金额</label><input name="amount" type="number" placeholder="请输入金额" required></div>
+                            <div class="form-group"><label>类别</label>
+                                <select name="category">
+                                    <option value="收入">收入</option>
+                                    <option value="支出">支出</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>经办人</label><input name="owner" type="text" placeholder="如：财务员"></div>
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">提交</button>
                                 <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
@@ -1684,25 +2196,210 @@
                     </div>
                 `;
             }
-            if(panelId === 'finance-report' || panelId === 'finance-approve-list' || panelId === 'finance-analysis' || panelId === 'finance-import' || panelId === 'finance-flow-settings'){
+            if(panelId === 'finance-import'){
                 return `
                     <div class="sub-panel-section">
                         <h4>${title}</h4>
-                        <table class="data-table">
-                            <thead><tr><th>时间</th><th>说明</th><th>金额</th></tr></thead>
-                            <tbody id="panel-finance-body"><tr><td colspan="3">加载中...</td></tr></tbody>
+                        <p class="muted">支持 CSV：每行格式为 说明,金额,类别,经办人（可选）。</p>
+                        <div class="sub-module-actions" style="margin-bottom:10px;">
+                            <button class="btn btn-secondary" id="finance-import-template">下载模板</button>
+                        </div>
+                        <form class="task-form" id="finance-import-form">
+                            <div class="form-group"><label>选择 CSV 文件</label><input name="file" type="file" accept=".csv" required></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">导入</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>说明</th><th>金额</th><th>类别</th><th>经办人</th><th>结果</th></tr></thead>
+                            <tbody id="panel-finance-import-preview"><tr><td colspan="5">暂无预览</td></tr></tbody>
                         </table>
                     </div>
                 `;
             }
-            if(panelId === 'warning-list' || panelId === 'warning-handle-log' || panelId === 'warning-monitor' || panelId === 'warning-handle' || panelId === 'warning-stats' || panelId === 'warning-notify-log' || panelId === 'warning-assign'){
+            if(panelId === 'finance-approve-list'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-actions" style="margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+                            <select id="finance-approve-filter">
+                                <option value="全部">全部</option>
+                                <option value="待审核">待审核</option>
+                                <option value="已通过">已通过</option>
+                                <option value="已驳回">已驳回</option>
+                            </select>
+                            <button class="btn btn-primary" id="finance-approve-refresh">刷新</button>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>时间</th><th>说明</th><th>金额</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody id="panel-finance-approve-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'finance-flow-settings'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="finance-flow-form">
+                            <div class="form-group"><label>审核节点</label><input name="steps" type="text" placeholder="如：出纳复核 > 主管审批 > 入账" required></div>
+                            <div class="form-group"><label><input type="checkbox" name="autoNotify" checked> 审核完成自动通知</label></div>
+                            <div class="form-group"><label><input type="checkbox" name="needAttachment"> 强制上传凭证附件</label></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">保存流程</button>
+                                <button type="button" class="btn btn-secondary" id="finance-flow-reset">恢复默认</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+            }
+            if(panelId === 'finance-report'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-actions" style="margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+                            <input id="finance-report-keyword" type="text" placeholder="搜索说明" style="padding:6px;border:1px solid #e0e0e0;border-radius:4px;">
+                            <select id="finance-report-type">
+                                <option value="全部">全部</option>
+                                <option value="收入">收入</option>
+                                <option value="支出">支出</option>
+                            </select>
+                            <button class="btn btn-primary" id="finance-report-refresh">刷新</button>
+                            <button class="btn btn-secondary" id="finance-report-export">导出报表</button>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>时间</th><th>说明</th><th>金额</th><th>类别</th><th>经办人</th></tr></thead>
+                            <tbody id="panel-finance-report-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'finance-analysis'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="chart-grid">
+                            <div class="chart-card">
+                                <div class="chart-title">收支趋势</div>
+                                <svg id="finance-analysis-line" class="line-chart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+                                <div class="chart-legend" id="finance-analysis-legend">加载中...</div>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-title">类别占比（示意）</div>
+                                <div id="finance-analysis-summary" class="muted">加载中...</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            if(panelId === 'warning-list'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-actions" style="margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+                            <select id="warning-filter-status">
+                                <option value="">全部状态</option>
+                                <option value="未处理">未处理</option>
+                                <option value="已处理">已处理</option>
+                            </select>
+                            <select id="warning-filter-sev">
+                                <option value="">全部严重程度</option>
+                                <option value="高">高</option>
+                                <option value="中">中</option>
+                                <option value="低">低</option>
+                            </select>
+                            <button class="btn btn-primary" id="warning-list-refresh">刷新</button>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>标题</th><th>说明</th><th>严重程度</th><th>状态</th><th>分派</th><th>通知</th><th>操作</th></tr></thead>
+                            <tbody id="panel-warning-list-body"><tr><td colspan="7">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'warning-handle'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <p class="muted">待处理预警列表，可直接标记为已处理。</p>
+                        <table class="data-table">
+                            <thead><tr><th>标题</th><th>说明</th><th>严重程度</th><th>状态</th><th>处理人</th><th>操作</th></tr></thead>
+                            <tbody id="panel-warning-handle-body"><tr><td colspan="6">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'warning-rules'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-actions" style="margin-bottom:10px;">
+                            <button class="btn btn-primary" onclick="showSubPanel('warning-rules-create')">新建规则</button>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>规则名称</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+                            <tbody id="panel-warning-rules-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'warning-monitor'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="chart-card" style="margin-bottom:12px;">
+                            <div class="chart-title">预警概览</div>
+                            <div id="warning-monitor-summary" class="muted">加载中...</div>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>标题</th><th>严重程度</th><th>状态</th><th>时间</th></tr></thead>
+                            <tbody id="panel-warning-monitor-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'warning-assign'){
                 return `
                     <div class="sub-panel-section">
                         <h4>${title}</h4>
                         <table class="data-table">
-                            <thead><tr><th>标题</th><th>说明</th><th>严重程度</th><th>状态</th></tr></thead>
-                            <tbody id="panel-warning-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                            <thead><tr><th>标题</th><th>严重程度</th><th>当前分派</th><th>操作</th></tr></thead>
+                            <tbody id="panel-warning-assign-body"><tr><td colspan="4">加载中...</td></tr></tbody>
                         </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'warning-notify-log'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <table class="data-table">
+                            <thead><tr><th>预警ID</th><th>通知人</th><th>备注</th><th>时间</th></tr></thead>
+                            <tbody id="panel-warning-notify-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'warning-handle-log'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <table class="data-table">
+                            <thead><tr><th>预警ID</th><th>处理人</th><th>备注</th><th>时间</th></tr></thead>
+                            <tbody id="panel-warning-handle-log-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'warning-stats'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="chart-card">
+                            <div class="chart-title">统计结果</div>
+                            <div id="panel-warning-stats" class="muted">加载中...</div>
+                        </div>
                     </div>
                 `;
             }
@@ -1796,14 +2493,407 @@
                     </div>
                 `;
             }
-            if(panelId.startsWith('ops-')){
+            if(panelId === 'ops-monitor'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="ops-monitor-form">
+                            <div class="form-group"><label>指标名称</label><input name="metric" type="text" placeholder="如：CPU 使用率" required></div>
+                            <div class="form-group"><label>指标值</label><input name="value" type="text" placeholder="如：35%" required></div>
+                            <div class="form-group"><label>状态</label><input name="status" type="text" placeholder="正常/关注/告警"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">新增指标</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>指标</th><th>数值</th><th>状态</th><th>时间</th></tr></thead>
+                            <tbody id="panel-ops-monitor-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'ops-health'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="ops-health-form">
+                            <div class="form-group"><label>服务名称</label><input name="service" type="text" placeholder="如：后端服务" required></div>
+                            <div class="form-group"><label>状态</label><input name="status" type="text" placeholder="正常/异常" required></div>
+                            <div class="form-group"><label>详情</label><input name="detail" type="text" placeholder="如：端口 8080 可用"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">记录检查</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>服务</th><th>状态</th><th>详情</th><th>时间</th></tr></thead>
+                            <tbody id="panel-ops-health-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'ops-log-search'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="ops-log-form">
+                            <div class="form-group"><label>级别</label><input name="level" type="text" placeholder="INFO/WARN/ERROR" required></div>
+                            <div class="form-group"><label>来源</label><input name="source" type="text" placeholder="如：system"></div>
+                            <div class="form-group"><label>内容</label><input name="message" type="text" placeholder="日志内容" required></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">记录日志</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>级别</th><th>来源</th><th>内容</th><th>时间</th></tr></thead>
+                            <tbody id="panel-ops-logs-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'ops-log-report'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <table class="data-table">
+                            <thead><tr><th>级别</th><th>数量</th></tr></thead>
+                            <tbody id="panel-ops-log-report-body"><tr><td colspan="2">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'ops-backup'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="ops-backup-form">
+                            <div class="form-group"><label>备份对象</label><input name="target" type="text" placeholder="如：village_db" required></div>
+                            <div class="form-group"><label>备份类型</label><input name="type" type="text" placeholder="全量/增量"></div>
+                            <div class="form-group"><label>执行人</label><input name="operator" type="text" placeholder="admin"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">创建备份</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>对象</th><th>类型</th><th>状态</th><th>执行人</th><th>开始时间</th><th>完成时间</th></tr></thead>
+                            <tbody id="panel-ops-backup-body"><tr><td colspan="6">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'ops-restore'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="ops-restore-form">
+                            <div class="form-group"><label>备份ID</label><input name="backup_id" type="number" placeholder="如：1" required></div>
+                            <div class="form-group"><label>执行人</label><input name="operator" type="text" placeholder="admin"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">执行恢复</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>备份ID</th><th>状态</th><th>执行人</th><th>开始时间</th><th>完成时间</th></tr></thead>
+                            <tbody id="panel-ops-restore-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'ops-audit-search'){
                 return `
                     <div class="sub-panel-section">
                         <h4>${title}</h4>
                         <table class="data-table">
                             <thead><tr><th>动作</th><th>操作者</th><th>状态</th><th>时间</th></tr></thead>
-                            <tbody id="panel-ops-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                            <tbody id="panel-ops-audit-body"><tr><td colspan="4">加载中...</td></tr></tbody>
                         </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'ops-audit-report'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <table class="data-table">
+                            <thead><tr><th>状态</th><th>数量</th></tr></thead>
+                            <tbody id="panel-ops-audit-report-body"><tr><td colspan="2">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'gov-task-list'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-actions" style="margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+                            <select id="gov-task-filter">
+                                <option value="">全部状态</option>
+                                <option value="待执行">待执行</option>
+                                <option value="进行中">进行中</option>
+                                <option value="已完成">已完成</option>
+                            </select>
+                            <button class="btn btn-primary" id="gov-task-refresh">刷新</button>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>标题</th><th>负责人</th><th>状态</th><th>截止时间</th><th>操作</th></tr></thead>
+                            <tbody id="panel-gov-task-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'gov-task-publish'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="gov-task-form">
+                            <div class="form-group"><label>任务标题</label><input name="title" type="text" placeholder="请输入任务标题" required></div>
+                            <div class="form-group"><label>任务描述</label><textarea name="description" placeholder="请输入任务描述" required></textarea></div>
+                            <div class="form-group"><label>负责人</label><input name="assignee" type="text" placeholder="负责人姓名"></div>
+                            <div class="form-group"><label>截止时间</label><input name="due_at" type="text" placeholder="如：2024-02-01"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">发布任务</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+            }
+            if(panelId === 'gov-checkin-record'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="gov-checkin-form">
+                            <div class="form-group"><label>任务ID</label><input name="task_id" type="number" placeholder="请输入任务ID" required></div>
+                            <div class="form-group"><label>签到人</label><input name="user_name" type="text" placeholder="签到人姓名" required></div>
+                            <div class="form-group"><label>备注</label><input name="note" type="text" placeholder="签到说明"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">新增签到</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>任务ID</th><th>签到人</th><th>备注</th><th>时间</th></tr></thead>
+                            <tbody id="panel-gov-checkin-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'gov-acceptance'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="gov-acceptance-form">
+                            <div class="form-group"><label>任务ID</label><input name="task_id" type="number" placeholder="请输入任务ID" required></div>
+                            <div class="form-group"><label>验收结果</label>
+                                <select name="result">
+                                    <option value="通过">通过</option>
+                                    <option value="不通过">不通过</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>验收人</label><input name="reviewer" type="text" placeholder="验收人姓名" required></div>
+                            <div class="form-group"><label>备注</label><input name="note" type="text" placeholder="验收说明"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">提交验收</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>任务ID</th><th>结果</th><th>验收人</th><th>时间</th></tr></thead>
+                            <tbody id="panel-gov-acceptance-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'gov-point-rules'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="gov-point-rule-form">
+                            <div class="form-group"><label>规则名称</label><input name="rule_name" type="text" placeholder="如：按时签到" required></div>
+                            <div class="form-group"><label>积分</label><input name="points" type="number" placeholder="积分值" required></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">新增规则</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>规则</th><th>积分</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody id="panel-gov-point-rule-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'gov-point-audit'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="gov-point-audit-form">
+                            <div class="form-group"><label>姓名</label><input name="user_name" type="text" placeholder="申请人" required></div>
+                            <div class="form-group"><label>规则名称</label><input name="rule_name" type="text" placeholder="规则" required></div>
+                            <div class="form-group"><label>积分</label><input name="points" type="number" placeholder="积分" required></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">提交申请</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>姓名</th><th>规则</th><th>积分</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody id="panel-gov-point-audit-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'gov-activity-list'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <table class="data-table">
+                            <thead><tr><th>活动名称</th><th>组织者</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
+                            <tbody id="panel-gov-activity-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'gov-activity-create'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="gov-activity-form">
+                            <div class="form-group"><label>活动名称</label><input name="title" type="text" placeholder="请输入活动名称" required></div>
+                            <div class="form-group"><label>组织者</label><input name="organizer" type="text" placeholder="组织者姓名" required></div>
+                            <div class="form-group"><label>开始时间</label><input name="start_at" type="text" placeholder="如：2024-02-01 09:00"></div>
+                            <div class="form-group"><label>结束时间</label><input name="end_at" type="text" placeholder="如：2024-02-01 17:00"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">创建活动</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+            }
+            if(panelId === 'feedback-pending'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-actions" style="margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+                            <select id="feedback-type-filter">
+                                <option value="">全部类型</option>
+                                <option value="民情反馈">民情反馈</option>
+                                <option value="政务公开">政务公开</option>
+                            </select>
+                            <button class="btn btn-primary" id="feedback-pending-refresh">刷新</button>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>标题</th><th>类型</th><th>提交人</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody id="panel-feedback-pending-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'feedback-processing'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <table class="data-table">
+                            <thead><tr><th>标题</th><th>类型</th><th>提交人</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody id="panel-feedback-processing-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'feedback-flow'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="feedback-flow-form">
+                            <div class="form-group"><label>流程节点</label><input name="step_name" type="text" placeholder="如：受理-核实-处理-反馈" required></div>
+                            <div class="form-group"><label>负责人</label><input name="owner" type="text" placeholder="负责人姓名"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">保存流程</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                        <table class="data-table" style="margin-top:12px;">
+                            <thead><tr><th>节点</th><th>负责人</th><th>状态</th><th>更新时间</th></tr></thead>
+                            <tbody id="panel-feedback-flow-body"><tr><td colspan="4">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'feedback-publish'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-actions" style="margin-bottom:10px;">
+                            <button class="btn btn-primary" onclick="showSubPanel('feedback-create')">新建公告</button>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>标题</th><th>发布人</th><th>状态</th><th>发布时间</th><th>操作</th></tr></thead>
+                            <tbody id="panel-feedback-publish-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'feedback-create'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <form class="task-form" id="feedback-create-form">
+                            <div class="form-group"><label>标题</label><input name="title" type="text" placeholder="请输入标题" required></div>
+                            <div class="form-group"><label>内容</label><textarea name="content" placeholder="请输入内容" required></textarea></div>
+                            <div class="form-group"><label>发布人</label><input name="publisher" type="text" placeholder="发布人姓名" required></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">保存草稿</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideSubPanel()">取消</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+            }
+            if(panelId === 'feedback-stats'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="chart-card">
+                            <div class="chart-title">统计结果</div>
+                            <div id="panel-feedback-stats" class="muted">加载中...</div>
+                        </div>
+                    </div>
+                `;
+            }
+            if(panelId === 'feedback-report'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="sub-module-actions" style="margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+                            <input id="feedback-report-keyword" type="text" placeholder="搜索标题" style="padding:6px;border:1px solid #e0e0e0;border-radius:4px;">
+                            <select id="feedback-report-status">
+                                <option value="">全部状态</option>
+                                <option value="待处理">待处理</option>
+                                <option value="处理中">处理中</option>
+                                <option value="已完成">已完成</option>
+                            </select>
+                            <button class="btn btn-primary" id="feedback-report-refresh">刷新</button>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>标题</th><th>类型</th><th>提交人</th><th>状态</th><th>时间</th></tr></thead>
+                            <tbody id="panel-feedback-report-body"><tr><td colspan="5">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if(panelId === 'feedback-analysis'){
+                return `
+                    <div class="sub-panel-section">
+                        <h4>${title}</h4>
+                        <div class="chart-card">
+                            <div class="chart-title">分析结论</div>
+                            <div id="panel-feedback-analysis" class="muted">加载中...</div>
+                        </div>
                     </div>
                 `;
             }
@@ -1854,6 +2944,56 @@
             loadPanelData(panelId);
         }
 
+        function renderLineChart(svgId, labels, values, color){
+            const svg = document.getElementById(svgId);
+            if(!svg) return;
+            const w = 600; const h = 200; const pad = 20;
+            const max = Math.max(...values, 1);
+            const min = Math.min(...values, 0);
+            const span = Math.max(max - min, 1);
+            const points = values.map((v, i)=>{
+                const x = pad + (i/(values.length-1||1))*(w-2*pad);
+                const y = h - pad - ((v - min)/span)*(h-2*pad);
+                return {x, y};
+            });
+            const path = points.map((p,i)=>`${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
+            const circles = points.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="${color}" />`).join('');
+            const axes = `<line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="#e2e8f0"/>
+                          <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#e2e8f0"/>`;
+            svg.innerHTML = `${axes}<path d="${path}" fill="none" stroke="${color}" stroke-width="2"/>${circles}`;
+        }
+
+        function parseDateSafe(value){
+            if(!value) return null;
+            const d = new Date(value);
+            if(!isNaN(d.getTime())) return d;
+            return null;
+        }
+
+        function formatLabel(date, period){
+            if(!date) return '';
+            const y = date.getFullYear();
+            const m = `${date.getMonth()+1}`.padStart(2,'0');
+            const d = `${date.getDate()}`.padStart(2,'0');
+            if(period === 'year') return `${y}`;
+            if(period === 'week') return `${m}-${d}`;
+            return `${m}-${d}`;
+        }
+
+        function applyPeriod(items, period, valueKey, timeKey){
+            const withDate = items
+                .map(it => ({...it, _date: parseDateSafe(it[timeKey])}))
+                .filter(it => it._date)
+                .sort((a,b)=>a._date-b._date);
+            let sliced = withDate;
+            if(period === 'week') sliced = withDate.slice(-7);
+            if(period === 'month') sliced = withDate.slice(-30).filter((_,i)=> i % 5 === 0).slice(-7);
+            if(period === 'year') sliced = withDate.slice(-12);
+            const labels = sliced.map(it => formatLabel(it._date, period));
+            const values = sliced.map(it => Number(it[valueKey] || 0));
+            return { labels, values };
+        }
+
         function hideSubPanel(){
             document.getElementById('sub-panel-container').style.display = 'none';
             document.getElementById('sub-panel-overlay').style.display = 'none';
@@ -1867,13 +3007,98 @@
         });
 
         async function loadPanelData(panelId){
+            if(panelId === 'dashboard-overview'){
+                const financeLegend = document.getElementById('finance-legend');
+                const industryLegend = document.getElementById('industry-legend');
+                const taskSummary = document.getElementById('task-summary');
+                try{
+                    const [txRes, indRes, warnRes] = await Promise.all([
+                        fetch(API_BASE + '/api/finance/transactions', {cache:'no-store'}),
+                        fetch(API_BASE + '/api/industry/metrics', {cache:'no-store'}),
+                        fetch(API_BASE + '/api/warnings/events', {cache:'no-store'})
+                    ]);
+                    const txList = await txRes.json();
+                    const indList = await indRes.json();
+                    const warnList = await warnRes.json();
+
+                    const txItems = (txList || []).map(t => ({...t, time: t.time || t.created_at || ''}));
+                    const indItems = (indList || []).map(m => ({...m, updated_at: m.updated_at || ''}));
+
+                    const applyFinance = (period)=>{
+                        const {labels, values} = applyPeriod(txItems, period, 'amount', 'time');
+                        if (values.length) {
+                            renderLineChart('finance-line', labels, values, '#2563eb');
+                            financeLegend.textContent = `周期：${period}，最新金额：${values[values.length-1]}`;
+                        } else {
+                            renderLineChart('finance-line', ['',''], [0,0], '#2563eb');
+                            financeLegend.textContent = '暂无财务数据';
+                        }
+                    };
+                    const applyIndustry = (period)=>{
+                        const {labels, values} = applyPeriod(indItems, period, 'value', 'updated_at');
+                        if (values.length) {
+                            renderLineChart('industry-line', labels, values, '#16a34a');
+                            industryLegend.textContent = `周期：${period}，最新值：${values[values.length-1]}`;
+                        } else {
+                            renderLineChart('industry-line', ['',''], [0,0], '#16a34a');
+                            industryLegend.textContent = '暂无产业数据';
+                        }
+                    };
+
+                    const financeToggle = document.getElementById('finance-toggle');
+                    const industryToggle = document.getElementById('industry-toggle');
+                    const bindToggle = (wrap, applyFn)=>{
+                        if(!wrap || wrap.dataset.bound) return;
+                        wrap.dataset.bound = '1';
+                        wrap.addEventListener('click', (e)=>{
+                            const btn = e.target.closest('button[data-period]');
+                            if(!btn) return;
+                            wrap.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+                            btn.classList.add('active');
+                            applyFn(btn.getAttribute('data-period'));
+                        });
+                    };
+                    bindToggle(financeToggle, applyFinance);
+                    bindToggle(industryToggle, applyIndustry);
+
+                    applyFinance('month');
+                    applyIndustry('month');
+
+                    const pendingWarnings = (warnList || []).filter(w => (w.status || '') === '未处理').length;
+                    taskSummary.textContent = `待处理预警：${pendingWarnings} 条`;
+                }catch(e){
+                    renderLineChart('finance-line', ['',''], [0,0], '#2563eb');
+                    renderLineChart('industry-line', ['',''], [0,0], '#16a34a');
+                    if (financeLegend) financeLegend.textContent = '无法加载财务数据';
+                    if (industryLegend) industryLegend.textContent = '无法加载产业数据';
+                    if (taskSummary) taskSummary.textContent = '无法加载待处理任务信息';
+                }
+                return;
+            }
             if(panelId === 'user-residents'){
                 try{
                     const r = await fetch(API_BASE + '/api/users', {cache:'no-store'});
                     const users = await r.json();
                     const tbody = document.getElementById('panel-users-body');
                     if(!tbody) return;
-                    tbody.innerHTML = users.map(u=>`<tr><td>${u.id}</td><td>${u.name}</td><td>${u.role||'-'}</td><td><button class="btn btn-secondary" data-action="edit" data-id="${u.id}">编辑</button> <button class="btn btn-secondary" data-action="delete" data-id="${u.id}">删除</button></td></tr>`).join('');
+                    window.userStatusStore = window.userStatusStore || {};
+                    tbody.innerHTML = users.map(u=>{
+                        const status = window.userStatusStore[u.id] || '正常';
+                        return `<tr>
+                            <td>${u.id}</td>
+                            <td>${u.name}</td>
+                            <td>${u.username || '-'}</td>
+                            <td>${u.password || '-'}</td>
+                            <td>${u.role||'-'}</td>
+                            <td>${status}</td>
+                            <td>
+                                <button class="btn btn-secondary" data-action="edit" data-id="${u.id}">编辑</button>
+                                <button class="btn btn-secondary" data-action="delete" data-id="${u.id}">删除</button>
+                                <button class="btn btn-secondary" data-action="reset" data-id="${u.id}">重置密码</button>
+                                <button class="btn btn-secondary" data-action="toggle" data-id="${u.id}">${status === '正常' ? '锁定' : '解锁'}</button>
+                            </td>
+                        </tr>`;
+                    }).join('');
                     const table = tbody.closest('table');
                     if(table && !table.dataset.bound){
                         table.dataset.bound = '1';
@@ -1889,12 +3114,22 @@
                                 showSubPanel('user-residents');
                             }
                             if(action === 'edit'){
-                                const name = prompt('请输入姓名', btn.closest('tr').children[1].textContent);
+                                const row = btn.closest('tr');
+                                const name = prompt('请输入姓名', row.children[1].textContent);
                                 if(name===null) return;
-                                const role = prompt('请输入角色', btn.closest('tr').children[2].textContent);
+                                const role = prompt('请输入角色', row.children[4].textContent);
                                 const payload = { name, role };
                                 const r = await fetch(API_BASE + '/api/users/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
                                 if(!r.ok){ alert('更新失败'); return; }
+                                showSubPanel('user-residents');
+                            }
+                            if(action === 'reset'){
+                                const newPass = prompt('请输入新密码');
+                                if(newPass===null) return;
+                                alert('已提交重置请求（示例）：用户ID='+id);
+                            }
+                            if(action === 'toggle'){
+                                window.userStatusStore[id] = (window.userStatusStore[id] || '正常') === '正常' ? '锁定' : '正常';
                                 showSubPanel('user-residents');
                             }
                         });
@@ -1904,7 +3139,7 @@
                         form.dataset.bound = '1';
                         form.addEventListener('submit', async (e)=>{
                             e.preventDefault();
-                            const payload = { name: form.name.value, role: form.role.value };
+                            const payload = { name: form.name.value, role: form.role.value, username: form.username.value, password: form.password.value };
                             const r = await fetch(API_BASE + '/api/users', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
                             if(!r.ok){ alert('新增失败'); return; }
                             form.reset();
@@ -1913,12 +3148,25 @@
                     }
                 }catch(e){
                     const tbody = document.getElementById('panel-users-body');
-                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载用户数据</td></tr>';
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="7">无法加载用户数据</td></tr>';
                 }
                 return;
             }
             if(panelId === 'user-import'){
                 const form = document.getElementById('user-import-form');
+                const preview = document.getElementById('panel-import-preview');
+                const tplBtn = document.getElementById('user-import-template');
+                if(tplBtn && !tplBtn.dataset.bound){
+                    tplBtn.dataset.bound = '1';
+                    tplBtn.addEventListener('click', ()=>{
+                        const content = '姓名,角色,用户名,密码\n张三,管理员,zhangsan,123456';
+                        const blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = '用户导入模板.csv'; a.click();
+                        URL.revokeObjectURL(url);
+                    });
+                }
                 if(form && !form.dataset.bound){
                     form.dataset.bound = '1';
                     form.addEventListener('submit', async (e)=>{
@@ -1930,61 +3178,1192 @@
                         let start = 0;
                         if(lines[0] && (lines[0].includes('name') || lines[0].includes('姓名'))) start = 1;
                         let ok = 0; let fail = 0;
+                        const previewRows = [];
                         for(let i=start;i<lines.length;i++){
                             const parts = lines[i].split(',');
                             const name = (parts[0]||'').trim();
                             const role = (parts[1]||'').trim();
-                            if(!name){ fail++; continue; }
-                            const payload = { name, role };
+                            const username = (parts[2]||'').trim();
+                            const password = (parts[3]||'').trim();
+                            if(!name){ fail++; previewRows.push(`<tr><td>${name||'-'}</td><td>${role||'-'}</td><td>${username||'-'}</td><td>${password||'-'}</td><td>失败</td></tr>`); continue; }
+                            const payload = { name, role, username, password };
                             try{
                                 const r = await fetch(API_BASE + '/api/users', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
-                                if(!r.ok) { fail++; continue; }
+                                if(!r.ok) { fail++; previewRows.push(`<tr><td>${name}</td><td>${role||'-'}</td><td>${username||'-'}</td><td>${password||'-'}</td><td>失败</td></tr>`); continue; }
                                 ok++;
-                            }catch(err){ fail++; }
+                                previewRows.push(`<tr><td>${name}</td><td>${role||'-'}</td><td>${username||'-'}</td><td>${password||'-'}</td><td>成功</td></tr>`);
+                            }catch(err){ fail++; previewRows.push(`<tr><td>${name}</td><td>${role||'-'}</td><td>${username||'-'}</td><td>${password||'-'}</td><td>失败</td></tr>`); }
                         }
+                        if(preview){ preview.innerHTML = previewRows.join('') || '<tr><td colspan="5">暂无预览</td></tr>'; }
                         alert(`导入完成：成功 ${ok}，失败 ${fail}`);
                         form.reset();
+                    });
+                }
+                return;
+            }
+            if(panelId === 'user-login-settings'){
+                const form = document.getElementById('login-settings-form');
+                const resetBtn = document.getElementById('login-settings-reset');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', (e)=>{
+                        e.preventDefault();
+                        alert('登录设置已保存（示例）');
+                    });
+                }
+                if(resetBtn && !resetBtn.dataset.bound){
+                    resetBtn.dataset.bound = '1';
+                    resetBtn.addEventListener('click', ()=>{
+                        if(!form) return;
+                        form.captcha.checked = true;
+                        form.mfa.checked = false;
+                        form.lock.checked = false;
+                        form.maxFail.value = 5;
+                        form.remember.checked = true;
+                    });
+                }
+                return;
+            }
+            if(panelId === 'user-login-logs'){
+                try{
+                    const r = await fetch(API_BASE + '/api/users', {cache:'no-store'});
+                    const users = await r.json();
+                    const tbody = document.getElementById('panel-login-logs-body');
+                    const refreshBtn = document.getElementById('login-log-refresh');
+                    const exportBtn = document.getElementById('login-log-export');
+                    const keywordInput = document.getElementById('login-log-keyword');
+                    const statusSelect = document.getElementById('login-log-status');
+                    if(!tbody) return;
+                    const buildLogs = ()=>{
+                        const now = Date.now();
+                        return (users || []).slice(0, 10).map((u, idx)=>({
+                            time: new Date(now - idx*3600*1000).toLocaleString(),
+                            name: u.name,
+                            username: u.username || '-',
+                            ip: `192.168.1.${10+idx}`,
+                            status: idx % 3 === 0 ? '失败' : '成功'
+                        }));
+                    };
+                    const render = (logs)=>{
+                        tbody.innerHTML = logs.map(l=>`<tr><td>${l.time}</td><td>${l.name}</td><td>${l.username}</td><td>${l.ip}</td><td>${l.status}</td></tr>`).join('') || '<tr><td colspan="5">暂无日志</td></tr>';
+                    };
+                    let logs = buildLogs();
+                    const applyFilter = ()=>{
+                        const kw = (keywordInput?.value || '').trim();
+                        const status = statusSelect?.value || '';
+                        let filtered = logs;
+                        if(kw) filtered = filtered.filter(l => l.name.includes(kw) || l.username.includes(kw));
+                        if(status) filtered = filtered.filter(l => l.status === status);
+                        render(filtered);
+                    };
+                    render(logs);
+                    if(refreshBtn && !refreshBtn.dataset.bound){
+                        refreshBtn.dataset.bound = '1';
+                        refreshBtn.addEventListener('click', ()=>{ logs = buildLogs(); applyFilter(); });
+                    }
+                    if(exportBtn && !exportBtn.dataset.bound){
+                        exportBtn.dataset.bound = '1';
+                        exportBtn.addEventListener('click', ()=>{ alert('已导出登录日志（示例）'); });
+                    }
+                    if(keywordInput && !keywordInput.dataset.bound){
+                        keywordInput.dataset.bound = '1';
+                        keywordInput.addEventListener('input', applyFilter);
+                    }
+                    if(statusSelect && !statusSelect.dataset.bound){
+                        statusSelect.dataset.bound = '1';
+                        statusSelect.addEventListener('change', applyFilter);
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-login-logs-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载登录日志</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'user-roles'){
+                try{
+                    const r = await fetch(API_BASE + '/api/users', {cache:'no-store'});
+                    const users = await r.json();
+                    window.userRoleStore = window.userRoleStore || [
+                        {name:'管理员', desc:'系统最高权限'},
+                        {name:'普通用户', desc:'日常操作权限'},
+                        {name:'网格员', desc:'巡查与上报'}
+                    ];
+                    const tbody = document.getElementById('panel-roles-body');
+                    const form = document.getElementById('role-add-form');
+                    const resetBtn = document.getElementById('role-reset');
+                    if(!tbody) return;
+                    const render = ()=>{
+                        tbody.innerHTML = window.userRoleStore.map(role=>{
+                            const count = (users || []).filter(u => (u.role||'') === role.name).length;
+                            return `<tr><td>${role.name}</td><td>${role.desc||'-'}</td><td>${count}</td><td>
+                                <button class="btn btn-secondary" data-action="edit" data-role="${role.name}">编辑</button>
+                                <button class="btn btn-secondary" data-action="delete" data-role="${role.name}">删除</button>
+                                <button class="btn btn-secondary" data-action="perm" data-role="${role.name}">配置权限</button>
+                            </td></tr>`;
+                        }).join('');
+                    };
+                    render();
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const action = btn.getAttribute('data-action');
+                            const roleName = btn.getAttribute('data-role');
+                            if(action === 'delete'){
+                                if(!confirm('确认删除角色 '+roleName+' 吗？')) return;
+                                window.userRoleStore = window.userRoleStore.filter(r => r.name !== roleName);
+                                render();
+                            }
+                            if(action === 'edit'){
+                                const newName = prompt('角色名称', roleName);
+                                if(newName===null) return;
+                                const newDesc = prompt('角色描述', window.userRoleStore.find(r=>r.name===roleName)?.desc || '');
+                                window.userRoleStore = window.userRoleStore.map(r => r.name===roleName ? {name:newName, desc:newDesc} : r);
+                                render();
+                            }
+                            if(action === 'perm'){
+                                showSubPanel('user-permissions');
+                            }
+                        });
+                    }
+                    if(form && !form.dataset.bound){
+                        form.dataset.bound = '1';
+                        form.addEventListener('submit', (e)=>{
+                            e.preventDefault();
+                            const name = form.roleName.value.trim();
+                            if(!name) return;
+                            const desc = form.roleDesc.value.trim();
+                            window.userRoleStore.push({name, desc});
+                            form.reset();
+                            render();
+                        });
+                    }
+                    if(resetBtn && !resetBtn.dataset.bound){
+                        resetBtn.dataset.bound = '1';
+                        resetBtn.addEventListener('click', ()=>{ if(form) form.reset(); });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-roles-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载角色数据</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'user-permissions'){
+                window.userRoleStore = window.userRoleStore || [
+                    {name:'管理员', desc:'系统最高权限'},
+                    {name:'普通用户', desc:'日常操作权限'},
+                    {name:'网格员', desc:'巡查与上报'}
+                ];
+                window.userPermissionStore = window.userPermissionStore || {};
+                const select = document.getElementById('permission-role');
+                const list = document.getElementById('permission-list');
+                const saveBtn = document.getElementById('permission-save');
+                const resetBtn = document.getElementById('permission-reset');
+                const perms = ['用户管理','角色管理','财务查看','财务编辑','预警查看','预警处理','数据导出','系统设置'];
+                if(select){
+                    select.innerHTML = window.userRoleStore.map(r=>`<option value="${r.name}">${r.name}</option>`).join('');
+                }
+                const render = ()=>{
+                    if(!select || !list) return;
+                    const role = select.value || window.userRoleStore[0]?.name;
+                    const assigned = window.userPermissionStore[role] || [];
+                    list.innerHTML = perms.map(p=>{
+                        const checked = assigned.includes(p) ? 'checked' : '';
+                        return `<label style="display:block;padding:6px 0;"><input type="checkbox" value="${p}" ${checked}> ${p}</label>`;
+                    }).join('');
+                };
+                render();
+                if(select && !select.dataset.bound){
+                    select.dataset.bound = '1';
+                    select.addEventListener('change', render);
+                }
+                if(saveBtn && !saveBtn.dataset.bound){
+                    saveBtn.dataset.bound = '1';
+                    saveBtn.addEventListener('click', ()=>{
+                        const role = select.value;
+                        const chosen = Array.from(list.querySelectorAll('input[type="checkbox"]')).filter(i=>i.checked).map(i=>i.value);
+                        window.userPermissionStore[role] = chosen;
+                        alert('权限已保存（示例）');
+                    });
+                }
+                if(resetBtn && !resetBtn.dataset.bound){
+                    resetBtn.dataset.bound = '1';
+                    resetBtn.addEventListener('click', ()=>{
+                        const role = select.value;
+                        window.userPermissionStore[role] = [];
+                        render();
+                    });
+                }
+                return;
+            }
+            if(panelId === 'finance-import'){
+                const form = document.getElementById('finance-import-form');
+                const preview = document.getElementById('panel-finance-import-preview');
+                const tplBtn = document.getElementById('finance-import-template');
+                if(tplBtn && !tplBtn.dataset.bound){
+                    tplBtn.dataset.bound = '1';
+                    tplBtn.addEventListener('click', ()=>{
+                        const content = '说明,金额,类别,经办人\n村集体收入,12000,收入,张三';
+                        const blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = '财务导入模板.csv'; a.click();
+                        URL.revokeObjectURL(url);
+                    });
+                }
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', async (e)=>{
+                        e.preventDefault();
+                        const file = form.file.files[0];
+                        if(!file){ alert('请选择 CSV 文件'); return; }
+                        const text = await file.text();
+                        const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+                        let start = 0;
+                        if(lines[0] && (lines[0].includes('说明') || lines[0].includes('desc'))) start = 1;
+                        let ok = 0; let fail = 0;
+                        const previewRows = [];
+                        for(let i=start;i<lines.length;i++){
+                            const parts = lines[i].split(',');
+                            const desc = (parts[0]||'').trim();
+                            const amount = Number((parts[1]||'').trim() || 0);
+                            const category = (parts[2]||'收入').trim();
+                            const owner = (parts[3]||'').trim();
+                            if(!desc){ fail++; previewRows.push(`<tr><td>${desc||'-'}</td><td>${amount||'-'}</td><td>${category||'-'}</td><td>${owner||'-'}</td><td>失败</td></tr>`); continue; }
+                            try{
+                                const payload = { description: desc, desc, amount, category, owner };
+                                const r = await fetch(API_BASE + '/api/finance/transactions', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                                if(!r.ok){ fail++; previewRows.push(`<tr><td>${desc}</td><td>${amount}</td><td>${category}</td><td>${owner||'-'}</td><td>失败</td></tr>`); continue; }
+                                ok++;
+                                previewRows.push(`<tr><td>${desc}</td><td>${amount}</td><td>${category}</td><td>${owner||'-'}</td><td>成功</td></tr>`);
+                            }catch(err){ fail++; previewRows.push(`<tr><td>${desc}</td><td>${amount}</td><td>${category}</td><td>${owner||'-'}</td><td>失败</td></tr>`); }
+                        }
+                        if(preview){ preview.innerHTML = previewRows.join('') || '<tr><td colspan="5">暂无预览</td></tr>'; }
+                        alert(`导入完成：成功 ${ok}，失败 ${fail}`);
+                        form.reset();
+                    });
+                }
+                return;
+            }
+            if(panelId === 'finance-approve-list'){
+                try{
+                    const r = await fetch(API_BASE + '/api/finance/transactions', {cache:'no-store'});
+                    const tx = await r.json();
+                    const tbody = document.getElementById('panel-finance-approve-body');
+                    const filter = document.getElementById('finance-approve-filter');
+                    const refreshBtn = document.getElementById('finance-approve-refresh');
+                    if(!tbody) return;
+                    const render = (list)=>{
+                        const target = filter?.value || '全部';
+                        const rows = (list || []).map(t=>({
+                            ...t,
+                            status: t.status || '待审核'
+                        })).filter(t => target === '全部' || t.status === target);
+                        tbody.innerHTML = rows.map(t=>`<tr>
+                            <td>${t.time||'-'}</td>
+                            <td>${t.description||t.desc||'-'}</td>
+                            <td>${t.amount}</td>
+                            <td>${t.status}</td>
+                            <td>
+                                <button class="btn btn-primary" data-action="approve" data-id="${t.id}">通过</button>
+                                <button class="btn btn-secondary" data-action="reject" data-id="${t.id}">驳回</button>
+                            </td>
+                        </tr>`).join('') || '<tr><td colspan="5">暂无数据</td></tr>';
+                    };
+                    render(tx);
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const action = btn.getAttribute('data-action');
+                            const status = action === 'approve' ? '已通过' : '已驳回';
+                            const r = await fetch(API_BASE + '/api/finance/transactions/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status})});
+                            if(!r.ok){ alert('更新失败'); return; }
+                            const fresh = await fetch(API_BASE + '/api/finance/transactions', {cache:'no-store'});
+                            const list = await fresh.json();
+                            render(list);
+                        });
+                    }
+                    if(filter && !filter.dataset.bound){
+                        filter.dataset.bound = '1';
+                        filter.addEventListener('change', ()=>render(tx));
+                    }
+                    if(refreshBtn && !refreshBtn.dataset.bound){
+                        refreshBtn.dataset.bound = '1';
+                        refreshBtn.addEventListener('click', async ()=>{
+                            const fresh = await fetch(API_BASE + '/api/finance/transactions', {cache:'no-store'});
+                            const list = await fresh.json();
+                            render(list);
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-finance-approve-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载待审核数据</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'finance-flow-settings'){
+                const form = document.getElementById('finance-flow-form');
+                const resetBtn = document.getElementById('finance-flow-reset');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', (e)=>{
+                        e.preventDefault();
+                        alert('流程已保存（示例）');
+                    });
+                }
+                if(resetBtn && !resetBtn.dataset.bound){
+                    resetBtn.dataset.bound = '1';
+                    resetBtn.addEventListener('click', ()=>{
+                        if(!form) return;
+                        form.steps.value = '出纳复核 > 主管审批 > 入账';
+                        form.autoNotify.checked = true;
+                        form.needAttachment.checked = false;
+                    });
+                }
+                return;
+            }
+            if(panelId === 'finance-report'){
+                try{
+                    const r = await fetch(API_BASE + '/api/finance/transactions', {cache:'no-store'});
+                    const tx = await r.json();
+                    const tbody = document.getElementById('panel-finance-report-body');
+                    const keyword = document.getElementById('finance-report-keyword');
+                    const type = document.getElementById('finance-report-type');
+                    const refreshBtn = document.getElementById('finance-report-refresh');
+                    const exportBtn = document.getElementById('finance-report-export');
+                    if(!tbody) return;
+                    const buildRows = ()=>{
+                        const kw = (keyword?.value || '').trim();
+                        const target = type?.value || '全部';
+                        let rows = (tx || []).map(t=>({
+                            time: t.time || '-',
+                            desc: t.description || t.desc || '-',
+                            amount: t.amount,
+                            category: t.category || (t.amount >= 0 ? '收入' : '支出'),
+                            owner: t.owner || '-'
+                        }));
+                        if(kw) rows = rows.filter(r => r.desc.includes(kw));
+                        if(target !== '全部') rows = rows.filter(r => r.category === target);
+                        tbody.innerHTML = rows.map(t=>`<tr><td>${t.time}</td><td>${t.desc}</td><td>${t.amount}</td><td>${t.category}</td><td>${t.owner}</td></tr>`).join('') || '<tr><td colspan="5">暂无数据</td></tr>';
+                    };
+                    buildRows();
+                    if(keyword && !keyword.dataset.bound){
+                        keyword.dataset.bound = '1';
+                        keyword.addEventListener('input', buildRows);
+                    }
+                    if(type && !type.dataset.bound){
+                        type.dataset.bound = '1';
+                        type.addEventListener('change', buildRows);
+                    }
+                    if(refreshBtn && !refreshBtn.dataset.bound){
+                        refreshBtn.dataset.bound = '1';
+                        refreshBtn.addEventListener('click', buildRows);
+                    }
+                    if(exportBtn && !exportBtn.dataset.bound){
+                        exportBtn.dataset.bound = '1';
+                        exportBtn.addEventListener('click', ()=>{ alert('已导出报表（示例）'); });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-finance-report-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载财务数据</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'finance-analysis'){
+                try{
+                    const r = await fetch(API_BASE + '/api/finance/transactions', {cache:'no-store'});
+                    const tx = await r.json();
+                    const legend = document.getElementById('finance-analysis-legend');
+                    const summary = document.getElementById('finance-analysis-summary');
+                    const items = (tx || []).map(t=>({
+                        amount: Number(t.amount || 0),
+                        time: t.time || t.created_at || ''
+                    }));
+                    const {labels, values} = applyPeriod(items, 'month', 'amount', 'time');
+                    if(values.length){
+                        renderLineChart('finance-analysis-line', labels, values, '#2563eb');
+                        if(legend) legend.textContent = `近 ${values.length} 条记录趋势`;
+                    } else {
+                        renderLineChart('finance-analysis-line', ['',''], [0,0], '#2563eb');
+                        if(legend) legend.textContent = '暂无数据';
+                    }
+                    const income = items.filter(i=>i.amount>=0).reduce((a,b)=>a+b.amount,0);
+                    const expense = items.filter(i=>i.amount<0).reduce((a,b)=>a+Math.abs(b.amount),0);
+                    if(summary) summary.textContent = `收入合计：${income}；支出合计：${expense}`;
+                }catch(e){
+                    const legend = document.getElementById('finance-analysis-legend');
+                    const summary = document.getElementById('finance-analysis-summary');
+                    renderLineChart('finance-analysis-line', ['',''], [0,0], '#2563eb');
+                    if(legend) legend.textContent = '无法加载数据';
+                    if(summary) summary.textContent = '无法加载数据';
+                }
+                return;
+            }
+            if(panelId === 'warning-list'){
+                try{
+                    const r = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-warning-list-body');
+                    const statusFilter = document.getElementById('warning-filter-status');
+                    const severityFilter = document.getElementById('warning-filter-sev');
+                    const refreshBtn = document.getElementById('warning-list-refresh');
+                    if(!tbody) return;
+                    const actor = localStorage.getItem('userName') || 'admin';
+                    const render = (list)=>{
+                        const s = statusFilter?.value || '';
+                        const v = severityFilter?.value || '';
+                        let rows = (list || []);
+                        if(s) rows = rows.filter(w => (w.status||'') === s);
+                        if(v) rows = rows.filter(w => (w.severity||'') === v);
+                        tbody.innerHTML = rows.map(w=>`<tr>
+                            <td>${w.title}</td>
+                            <td>${w.msg||''}</td>
+                            <td>${w.severity||'-'}</td>
+                            <td>${w.status||'-'}</td>
+                            <td>${w.assignee||'-'}</td>
+                            <td>${w.notify_status||'未通知'}</td>
+                            <td>
+                                <button class="btn btn-primary" data-action="handle" data-id="${w.id}">处理</button>
+                                <button class="btn btn-secondary" data-action="assign" data-id="${w.id}">分派</button>
+                                <button class="btn btn-secondary" data-action="notify" data-id="${w.id}">通知</button>
+                                <button class="btn btn-secondary" data-action="delete" data-id="${w.id}">删除</button>
+                            </td>
+                        </tr>`).join('') || '<tr><td colspan="7">暂无数据</td></tr>';
+                    };
+                    render(items);
+                    const logAction = async (warningId, action, note)=>{
+                        await fetch(API_BASE + '/api/warnings/logs', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({warning_id: warningId, action, actor, note})});
+                    };
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const action = btn.getAttribute('data-action');
+                            if(action === 'delete'){
+                                if(!confirm('确认删除该预警吗？')) return;
+                                const r = await fetch(API_BASE + '/api/warnings/events/' + id, {method:'DELETE'});
+                                if(!r.ok){ alert('删除失败'); return; }
+                                const fresh = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                                render(await fresh.json());
+                            }
+                            if(action === 'assign'){
+                                const assignee = prompt('请输入分派人员');
+                                if(assignee===null) return;
+                                const r = await fetch(API_BASE + '/api/warnings/events/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({assignee})});
+                                if(!r.ok){ alert('分派失败'); return; }
+                                await logAction(id, 'assign', `分派给${assignee}`);
+                                const fresh = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                                render(await fresh.json());
+                            }
+                            if(action === 'notify'){
+                                const r = await fetch(API_BASE + '/api/warnings/events/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({notify_status:'已通知'})});
+                                if(!r.ok){ alert('通知失败'); return; }
+                                await logAction(id, 'notify', '已通知相关人员');
+                                const fresh = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                                render(await fresh.json());
+                            }
+                            if(action === 'handle'){
+                                const note = prompt('处理备注（可选）', '已处理');
+                                const handled_at = new Date().toISOString();
+                                const r = await fetch(API_BASE + '/api/warnings/events/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status:'已处理', handler: actor, handled_at})});
+                                if(!r.ok){ alert('更新失败'); return; }
+                                await logAction(id, 'handle', note || '已处理');
+                                const fresh = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                                render(await fresh.json());
+                            }
+                        });
+                    }
+                    if(statusFilter && !statusFilter.dataset.bound){
+                        statusFilter.dataset.bound = '1';
+                        statusFilter.addEventListener('change', ()=>render(items));
+                    }
+                    if(severityFilter && !severityFilter.dataset.bound){
+                        severityFilter.dataset.bound = '1';
+                        severityFilter.addEventListener('change', ()=>render(items));
+                    }
+                    if(refreshBtn && !refreshBtn.dataset.bound){
+                        refreshBtn.dataset.bound = '1';
+                        refreshBtn.addEventListener('click', async ()=>{
+                            const fresh = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                            render(await fresh.json());
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-warning-list-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="7">无法加载预警数据</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'warning-handle'){
+                try{
+                    const r = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-warning-handle-body');
+                    if(!tbody) return;
+                    const actor = localStorage.getItem('userName') || 'admin';
+                    const list = (items || []);
+                    tbody.innerHTML = list.map(w=>{
+                        const handled = (w.status || '') === '已处理';
+                        return `<tr>
+                            <td>${w.title}</td>
+                            <td>${w.msg||''}</td>
+                            <td>${w.severity||'-'}</td>
+                            <td>${w.status||'-'}</td>
+                            <td>${w.handler||'-'}</td>
+                            <td>${handled ? '<span class="status-badge status-completed">已处理</span>' : '<button class="btn btn-primary" data-action="handle" data-id="'+w.id+'">标记已处理</button>'}</td>
+                        </tr>`;
+                    }).join('') || '<tr><td colspan="6">暂无预警</td></tr>';
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const note = prompt('处理备注（可选）', '已处理');
+                            const handled_at = new Date().toISOString();
+                            const r = await fetch(API_BASE + '/api/warnings/events/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status:'已处理', handler: actor, handled_at})});
+                            if(!r.ok){ alert('更新失败'); return; }
+                            await fetch(API_BASE + '/api/warnings/logs', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({warning_id: id, action:'handle', actor, note: note || '已处理'})});
+                            showSubPanel('warning-handle');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-warning-handle-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="6">无法加载预警数据</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'warning-rules'){
+                try{
+                    const r = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-warning-rules-body');
+                    if(!tbody) return;
+                    const rules = (items || []).filter(w => w.msg === 'rule-created');
+                    tbody.innerHTML = rules.map(w=>`<tr>
+                        <td>${w.title}</td>
+                        <td>${w.status||'-'}</td>
+                        <td>${w.triggered_at||'-'}</td>
+                        <td>
+                            <button class="btn btn-primary" data-action="enable" data-id="${w.id}">启用</button>
+                            <button class="btn btn-secondary" data-action="delete" data-id="${w.id}">删除</button>
+                        </td>
+                    </tr>`).join('') || '<tr><td colspan="4">暂无规则</td></tr>';
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const action = btn.getAttribute('data-action');
+                            if(action === 'delete'){
+                                if(!confirm('确认删除该规则吗？')) return;
+                                const r = await fetch(API_BASE + '/api/warnings/events/' + id, {method:'DELETE'});
+                                if(!r.ok){ alert('删除失败'); return; }
+                                showSubPanel('warning-rules');
+                            }
+                            if(action === 'enable'){
+                                const r = await fetch(API_BASE + '/api/warnings/events/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status:'已生效'})});
+                                if(!r.ok){ alert('更新失败'); return; }
+                                showSubPanel('warning-rules');
+                            }
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-warning-rules-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载规则</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'warning-monitor'){
+                try{
+                    const [statsRes, listRes] = await Promise.all([
+                        fetch(API_BASE + '/api/warnings/stats', {cache:'no-store'}),
+                        fetch(API_BASE + '/api/warnings/events', {cache:'no-store'})
+                    ]);
+                    const stats = await statsRes.json();
+                    const list = await listRes.json();
+                    const summary = document.getElementById('warning-monitor-summary');
+                    const tbody = document.getElementById('panel-warning-monitor-body');
+                    if(summary) summary.textContent = `总数：${stats.total}，未处理：${stats.pending}，已处理：${stats.handled}，高：${stats.severity.high} 中：${stats.severity.mid} 低：${stats.severity.low}`;
+                    if(tbody){
+                        const latest = (list || []).slice(0, 8);
+                        tbody.innerHTML = latest.map(w=>`<tr><td>${w.title}</td><td>${w.severity||'-'}</td><td>${w.status||'-'}</td><td>${w.triggered_at||'-'}</td></tr>`).join('') || '<tr><td colspan="4">暂无预警</td></tr>';
+                    }
+                }catch(e){
+                    const summary = document.getElementById('warning-monitor-summary');
+                    const tbody = document.getElementById('panel-warning-monitor-body');
+                    if(summary) summary.textContent = '无法加载统计数据';
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载预警</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'warning-assign'){
+                try{
+                    const r = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-warning-assign-body');
+                    const actor = localStorage.getItem('userName') || 'admin';
+                    if(!tbody) return;
+                    tbody.innerHTML = (items || []).map(w=>`<tr>
+                        <td>${w.title}</td>
+                        <td>${w.severity||'-'}</td>
+                        <td>${w.assignee||'-'}</td>
+                        <td><button class="btn btn-primary" data-action="assign" data-id="${w.id}">重新分派</button></td>
+                    </tr>`).join('') || '<tr><td colspan="4">暂无预警</td></tr>';
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const assignee = prompt('请输入分派人员');
+                            if(assignee===null) return;
+                            const r = await fetch(API_BASE + '/api/warnings/events/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({assignee})});
+                            if(!r.ok){ alert('分派失败'); return; }
+                            await fetch(API_BASE + '/api/warnings/logs', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({warning_id: id, action:'assign', actor, note: `分派给${assignee}`})});
+                            showSubPanel('warning-assign');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-warning-assign-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载预警</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'warning-notify-log'){
+                try{
+                    const r = await fetch(API_BASE + '/api/warnings/logs?action=notify', {cache:'no-store'});
+                    const logs = await r.json();
+                    const tbody = document.getElementById('panel-warning-notify-body');
+                    if(!tbody) return;
+                    tbody.innerHTML = (logs || []).map(l=>`<tr><td>${l.warning_id}</td><td>${l.actor||'-'}</td><td>${l.note||'-'}</td><td>${l.created_at||'-'}</td></tr>`).join('') || '<tr><td colspan="4">暂无记录</td></tr>';
+                }catch(e){
+                    const tbody = document.getElementById('panel-warning-notify-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载通知记录</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'warning-handle-log'){
+                try{
+                    const r = await fetch(API_BASE + '/api/warnings/logs?action=handle', {cache:'no-store'});
+                    const logs = await r.json();
+                    const tbody = document.getElementById('panel-warning-handle-log-body');
+                    if(!tbody) return;
+                    tbody.innerHTML = (logs || []).map(l=>`<tr><td>${l.warning_id}</td><td>${l.actor||'-'}</td><td>${l.note||'-'}</td><td>${l.created_at||'-'}</td></tr>`).join('') || '<tr><td colspan="4">暂无记录</td></tr>';
+                }catch(e){
+                    const tbody = document.getElementById('panel-warning-handle-log-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载处置记录</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'warning-stats'){
+                try{
+                    const r = await fetch(API_BASE + '/api/warnings/stats', {cache:'no-store'});
+                    const stats = await r.json();
+                    const box = document.getElementById('panel-warning-stats');
+                    if(box) box.textContent = `总数：${stats.total}，未处理：${stats.pending}，已处理：${stats.handled}；高：${stats.severity.high} 中：${stats.severity.mid} 低：${stats.severity.low}`;
+                }catch(e){
+                    const box = document.getElementById('panel-warning-stats');
+                    if(box) box.textContent = '无法加载统计数据';
+                }
+                return;
+            }
+            if(panelId === 'gov-task-list'){
+                try{
+                    const r = await fetch(API_BASE + '/api/gov/tasks', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-gov-task-body');
+                    const filter = document.getElementById('gov-task-filter');
+                    const refreshBtn = document.getElementById('gov-task-refresh');
+                    if(!tbody) return;
+                    const render = (list)=>{
+                        const s = filter?.value || '';
+                        let rows = (list || []);
+                        if(s) rows = rows.filter(t => (t.status||'') === s);
+                        tbody.innerHTML = rows.map(t=>`<tr>
+                            <td>${t.title}</td>
+                            <td>${t.assignee||'-'}</td>
+                            <td>${t.status||'-'}</td>
+                            <td>${t.due_at||'-'}</td>
+                            <td>
+                                <button class="btn btn-primary" data-action="start" data-id="${t.id}">开始</button>
+                                <button class="btn btn-secondary" data-action="done" data-id="${t.id}">完成</button>
+                                <button class="btn btn-secondary" data-action="delete" data-id="${t.id}">删除</button>
+                            </td>
+                        </tr>`).join('') || '<tr><td colspan="5">暂无任务</td></tr>';
+                    };
+                    render(items);
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const action = btn.getAttribute('data-action');
+                            if(action === 'delete'){
+                                if(!confirm('确认删除该任务吗？')) return;
+                                const r = await fetch(API_BASE + '/api/gov/tasks/' + id, {method:'DELETE'});
+                                if(!r.ok){ alert('删除失败'); return; }
+                            }
+                            if(action === 'start'){
+                                const r = await fetch(API_BASE + '/api/gov/tasks/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status:'进行中'})});
+                                if(!r.ok){ alert('更新失败'); return; }
+                            }
+                            if(action === 'done'){
+                                const r = await fetch(API_BASE + '/api/gov/tasks/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status:'已完成'})});
+                                if(!r.ok){ alert('更新失败'); return; }
+                            }
+                            const fresh = await fetch(API_BASE + '/api/gov/tasks', {cache:'no-store'});
+                            render(await fresh.json());
+                        });
+                    }
+                    if(filter && !filter.dataset.bound){
+                        filter.dataset.bound = '1';
+                        filter.addEventListener('change', ()=>render(items));
+                    }
+                    if(refreshBtn && !refreshBtn.dataset.bound){
+                        refreshBtn.dataset.bound = '1';
+                        refreshBtn.addEventListener('click', async ()=>{
+                            const fresh = await fetch(API_BASE + '/api/gov/tasks', {cache:'no-store'});
+                            render(await fresh.json());
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-gov-task-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载任务</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'gov-task-publish'){
+                const form = document.getElementById('gov-task-form');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', async (e)=>{
+                        e.preventDefault();
+                        const payload = {
+                            title: form.title.value,
+                            description: form.description.value,
+                            assignee: form.assignee.value,
+                            due_at: form.due_at.value
+                        };
+                        const r = await fetch(API_BASE + '/api/gov/tasks', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                        if(!r.ok){ alert('发布失败'); return; }
+                        alert('发布成功');
                         hideSubPanel();
                     });
                 }
                 return;
             }
-            if(panelId === 'user-roles' || panelId === 'user-permissions' || panelId === 'user-login-logs' || panelId === 'user-login-settings'){
+            if(panelId === 'gov-checkin-record'){
                 try{
-                    const r = await fetch(API_BASE + '/api/users', {cache:'no-store'});
-                    const users = await r.json();
-                    const tbody = document.getElementById('panel-users-body');
-                    if(!tbody) return;
-                    tbody.innerHTML = users.map(u=>`<tr><td>${u.id}</td><td>${u.name}</td><td>${u.role||'-'}</td></tr>`).join('');
-                }catch(e){
-                    const tbody = document.getElementById('panel-users-body');
-                    if(tbody) tbody.innerHTML = '<tr><td colspan="3">无法加载用户数据</td></tr>';
-                }
-                return;
-            }
-            if(panelId === 'finance-report' || panelId === 'finance-approve-list' || panelId === 'finance-analysis' || panelId === 'finance-import' || panelId === 'finance-flow-settings'){
-                try{
-                    const r = await fetch(API_BASE + '/api/finance/transactions', {cache:'no-store'});
-                    const tx = await r.json();
-                    const tbody = document.getElementById('panel-finance-body');
-                    if(!tbody) return;
-                    tbody.innerHTML = tx.map(t=>`<tr><td>${t.time||'-'}</td><td>${t.desc}</td><td>${t.amount}</td></tr>`).join('');
-                }catch(e){
-                    const tbody = document.getElementById('panel-finance-body');
-                    if(tbody) tbody.innerHTML = '<tr><td colspan="3">无法加载财务数据</td></tr>';
-                }
-                return;
-            }
-            if(panelId === 'warning-list' || panelId === 'warning-handle-log' || panelId === 'warning-monitor' || panelId === 'warning-handle' || panelId === 'warning-stats' || panelId === 'warning-notify-log' || panelId === 'warning-assign'){
-                try{
-                    const r = await fetch(API_BASE + '/api/warnings/events', {cache:'no-store'});
+                    const r = await fetch(API_BASE + '/api/gov/checkins', {cache:'no-store'});
                     const items = await r.json();
-                    const tbody = document.getElementById('panel-warning-body');
-                    if(!tbody) return;
-                    tbody.innerHTML = items.map(w=>`<tr><td>${w.title}</td><td>${w.msg||''}</td><td>${w.severity||'-'}</td><td>${w.status||'-'}</td></tr>`).join('');
+                    const tbody = document.getElementById('panel-gov-checkin-body');
+                    if(tbody) tbody.innerHTML = (items || []).map(i=>`<tr><td>${i.task_id}</td><td>${i.user_name||'-'}</td><td>${i.note||'-'}</td><td>${i.checkin_time||'-'}</td></tr>`).join('') || '<tr><td colspan="4">暂无签到</td></tr>';
                 }catch(e){
-                    const tbody = document.getElementById('panel-warning-body');
-                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载预警数据</td></tr>';
+                    const tbody = document.getElementById('panel-gov-checkin-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载签到记录</td></tr>';
+                }
+                const form = document.getElementById('gov-checkin-form');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', async (e)=>{
+                        e.preventDefault();
+                        const payload = { task_id: form.task_id.value, user_name: form.user_name.value, note: form.note.value };
+                        const r = await fetch(API_BASE + '/api/gov/checkins', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                        if(!r.ok){ alert('新增失败'); return; }
+                        showSubPanel('gov-checkin-record');
+                    });
+                }
+                return;
+            }
+            if(panelId === 'gov-acceptance'){
+                try{
+                    const r = await fetch(API_BASE + '/api/gov/acceptance', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-gov-acceptance-body');
+                    if(tbody) tbody.innerHTML = (items || []).map(i=>`<tr><td>${i.task_id}</td><td>${i.result||'-'}</td><td>${i.reviewer||'-'}</td><td>${i.accepted_at||'-'}</td></tr>`).join('') || '<tr><td colspan="4">暂无验收记录</td></tr>';
+                }catch(e){
+                    const tbody = document.getElementById('panel-gov-acceptance-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载验收记录</td></tr>';
+                }
+                const form = document.getElementById('gov-acceptance-form');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', async (e)=>{
+                        e.preventDefault();
+                        const payload = { task_id: form.task_id.value, result: form.result.value, reviewer: form.reviewer.value, note: form.note.value };
+                        const r = await fetch(API_BASE + '/api/gov/acceptance', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                        if(!r.ok){ alert('提交失败'); return; }
+                        showSubPanel('gov-acceptance');
+                    });
+                }
+                return;
+            }
+            if(panelId === 'gov-point-rules'){
+                try{
+                    const r = await fetch(API_BASE + '/api/gov/point-rules', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-gov-point-rule-body');
+                    if(!tbody) return;
+                    tbody.innerHTML = (items || []).map(i=>`<tr><td>${i.rule_name}</td><td>${i.points}</td><td>${i.status||'-'}</td><td><button class="btn btn-secondary" data-action="toggle" data-id="${i.id}">${i.status==='启用'?'停用':'启用'}</button></td></tr>`).join('') || '<tr><td colspan="4">暂无规则</td></tr>';
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const next = btn.textContent === '启用' ? '启用' : '停用';
+                            const r = await fetch(API_BASE + '/api/gov/point-rules/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status: next})});
+                            if(!r.ok){ alert('更新失败'); return; }
+                            showSubPanel('gov-point-rules');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-gov-point-rule-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载积分规则</td></tr>';
+                }
+                const form = document.getElementById('gov-point-rule-form');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', async (e)=>{
+                        e.preventDefault();
+                        const payload = { rule_name: form.rule_name.value, points: form.points.value };
+                        const r = await fetch(API_BASE + '/api/gov/point-rules', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                        if(!r.ok){ alert('新增失败'); return; }
+                        showSubPanel('gov-point-rules');
+                    });
+                }
+                return;
+            }
+            if(panelId === 'gov-point-audit'){
+                try{
+                    const r = await fetch(API_BASE + '/api/gov/point-audit', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-gov-point-audit-body');
+                    if(!tbody) return;
+                    tbody.innerHTML = (items || []).map(i=>`<tr><td>${i.user_name}</td><td>${i.rule_name}</td><td>${i.points}</td><td>${i.status||'-'}</td><td>
+                        <button class="btn btn-primary" data-action="approve" data-id="${i.id}">通过</button>
+                        <button class="btn btn-secondary" data-action="reject" data-id="${i.id}">驳回</button>
+                    </td></tr>`).join('') || '<tr><td colspan="5">暂无申报</td></tr>';
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const action = btn.getAttribute('data-action');
+                            const status = action === 'approve' ? '已通过' : '已驳回';
+                            const approved_at = new Date().toISOString();
+                            const r = await fetch(API_BASE + '/api/gov/point-audit/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status, approved_at})});
+                            if(!r.ok){ alert('更新失败'); return; }
+                            showSubPanel('gov-point-audit');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-gov-point-audit-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载申报</td></tr>';
+                }
+                const form = document.getElementById('gov-point-audit-form');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', async (e)=>{
+                        e.preventDefault();
+                        const payload = { user_name: form.user_name.value, rule_name: form.rule_name.value, points: form.points.value };
+                        const r = await fetch(API_BASE + '/api/gov/point-audit', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                        if(!r.ok){ alert('提交失败'); return; }
+                        showSubPanel('gov-point-audit');
+                    });
+                }
+                return;
+            }
+            if(panelId === 'gov-activity-list'){
+                try{
+                    const r = await fetch(API_BASE + '/api/gov/activities', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-gov-activity-body');
+                    if(!tbody) return;
+                    tbody.innerHTML = (items || []).map(i=>`<tr><td>${i.title}</td><td>${i.organizer||'-'}</td><td>${i.status||'-'}</td><td>${i.start_at||'-'} ~ ${i.end_at||'-'}</td><td>
+                        <button class="btn btn-secondary" data-action="close" data-id="${i.id}">结束</button>
+                        <button class="btn btn-secondary" data-action="delete" data-id="${i.id}">删除</button>
+                    </td></tr>`).join('') || '<tr><td colspan="5">暂无活动</td></tr>';
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const action = btn.getAttribute('data-action');
+                            if(action === 'delete'){
+                                if(!confirm('确认删除该活动吗？')) return;
+                                const r = await fetch(API_BASE + '/api/gov/activities/' + id, {method:'DELETE'});
+                                if(!r.ok){ alert('删除失败'); return; }
+                            }
+                            if(action === 'close'){
+                                const r = await fetch(API_BASE + '/api/gov/activities/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status:'已结束'})});
+                                if(!r.ok){ alert('更新失败'); return; }
+                            }
+                            showSubPanel('gov-activity-list');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-gov-activity-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载活动</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'gov-activity-create'){
+                const form = document.getElementById('gov-activity-form');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', async (e)=>{
+                        e.preventDefault();
+                        const payload = { title: form.title.value, organizer: form.organizer.value, start_at: form.start_at.value, end_at: form.end_at.value };
+                        const r = await fetch(API_BASE + '/api/gov/activities', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                        if(!r.ok){ alert('创建失败'); return; }
+                        hideSubPanel();
+                    });
+                }
+                return;
+            }
+            if(panelId === 'feedback-pending'){
+                try{
+                    const r = await fetch(API_BASE + '/api/feedback/items?status=待处理', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-feedback-pending-body');
+                    const typeFilter = document.getElementById('feedback-type-filter');
+                    const refreshBtn = document.getElementById('feedback-pending-refresh');
+                    if(!tbody) return;
+                    const render = (list)=>{
+                        const t = typeFilter?.value || '';
+                        let rows = (list || []);
+                        if(t) rows = rows.filter(i => (i.type||'') === t);
+                        tbody.innerHTML = rows.map(i=>`<tr>
+                            <td>${i.title}</td>
+                            <td>${i.type||'-'}</td>
+                            <td>${i.reporter||'-'}</td>
+                            <td>${i.status||'-'}</td>
+                            <td>
+                                <button class="btn btn-primary" data-action="process" data-id="${i.id}">处理</button>
+                                <button class="btn btn-secondary" data-action="done" data-id="${i.id}">完成</button>
+                            </td>
+                        </tr>`).join('') || '<tr><td colspan="5">暂无待处理反馈</td></tr>';
+                    };
+                    render(items);
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const action = btn.getAttribute('data-action');
+                            const status = action === 'process' ? '处理中' : '已完成';
+                            const r = await fetch(API_BASE + '/api/feedback/items/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status})});
+                            if(!r.ok){ alert('更新失败'); return; }
+                            const fresh = await fetch(API_BASE + '/api/feedback/items?status=待处理', {cache:'no-store'});
+                            render(await fresh.json());
+                        });
+                    }
+                    if(typeFilter && !typeFilter.dataset.bound){
+                        typeFilter.dataset.bound = '1';
+                        typeFilter.addEventListener('change', ()=>render(items));
+                    }
+                    if(refreshBtn && !refreshBtn.dataset.bound){
+                        refreshBtn.dataset.bound = '1';
+                        refreshBtn.addEventListener('click', async ()=>{
+                            const fresh = await fetch(API_BASE + '/api/feedback/items?status=待处理', {cache:'no-store'});
+                            render(await fresh.json());
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-feedback-pending-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载反馈</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'feedback-processing'){
+                try{
+                    const r = await fetch(API_BASE + '/api/feedback/items?status=处理中', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-feedback-processing-body');
+                    if(!tbody) return;
+                    tbody.innerHTML = (items || []).map(i=>`<tr>
+                        <td>${i.title}</td>
+                        <td>${i.type||'-'}</td>
+                        <td>${i.reporter||'-'}</td>
+                        <td>${i.status||'-'}</td>
+                        <td>
+                            <button class="btn btn-primary" data-action="done" data-id="${i.id}">完成</button>
+                            <button class="btn btn-secondary" data-action="rollback" data-id="${i.id}">退回</button>
+                        </td>
+                    </tr>`).join('') || '<tr><td colspan="5">暂无处理中事项</td></tr>';
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const action = btn.getAttribute('data-action');
+                            const status = action === 'done' ? '已完成' : '待处理';
+                            const r = await fetch(API_BASE + '/api/feedback/items/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status})});
+                            if(!r.ok){ alert('更新失败'); return; }
+                            showSubPanel('feedback-processing');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-feedback-processing-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载处理中事项</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'feedback-flow'){
+                try{
+                    const r = await fetch(API_BASE + '/api/feedback/flow', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-feedback-flow-body');
+                    if(tbody) tbody.innerHTML = (items || []).map(i=>`<tr><td>${i.step_name}</td><td>${i.owner||'-'}</td><td>${i.status||'-'}</td><td>${i.updated_at||'-'}</td></tr>`).join('') || '<tr><td colspan="4">暂无流程</td></tr>';
+                }catch(e){
+                    const tbody = document.getElementById('panel-feedback-flow-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载流程</td></tr>';
+                }
+                const form = document.getElementById('feedback-flow-form');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', async (e)=>{
+                        e.preventDefault();
+                        const payload = { step_name: form.step_name.value, owner: form.owner.value };
+                        const r = await fetch(API_BASE + '/api/feedback/flow', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                        if(!r.ok){ alert('保存失败'); return; }
+                        showSubPanel('feedback-flow');
+                    });
+                }
+                return;
+            }
+            if(panelId === 'feedback-publish'){
+                try{
+                    const r = await fetch(API_BASE + '/api/feedback/announcements', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-feedback-publish-body');
+                    if(!tbody) return;
+                    tbody.innerHTML = (items || []).map(i=>`<tr>
+                        <td>${i.title}</td><td>${i.publisher||'-'}</td><td>${i.status||'-'}</td><td>${i.published_at||'-'}</td>
+                        <td>
+                            <button class="btn btn-primary" data-action="publish" data-id="${i.id}">发布</button>
+                            <button class="btn btn-secondary" data-action="unpublish" data-id="${i.id}">下架</button>
+                            <button class="btn btn-secondary" data-action="delete" data-id="${i.id}">删除</button>
+                        </td>
+                    </tr>`).join('') || '<tr><td colspan="5">暂无公告</td></tr>';
+                    if(tbody && !tbody.dataset.bound){
+                        tbody.dataset.bound = '1';
+                        tbody.addEventListener('click', async (e)=>{
+                            const btn = e.target.closest('button[data-action]');
+                            if(!btn) return;
+                            const id = btn.getAttribute('data-id');
+                            const action = btn.getAttribute('data-action');
+                            if(action === 'delete'){
+                                if(!confirm('确认删除该公告吗？')) return;
+                                const r = await fetch(API_BASE + '/api/feedback/announcements/' + id, {method:'DELETE'});
+                                if(!r.ok){ alert('删除失败'); return; }
+                            }
+                            if(action === 'publish'){
+                                const published_at = new Date().toISOString();
+                                const r = await fetch(API_BASE + '/api/feedback/announcements/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status:'已发布', published_at})});
+                                if(!r.ok){ alert('发布失败'); return; }
+                            }
+                            if(action === 'unpublish'){
+                                const r = await fetch(API_BASE + '/api/feedback/announcements/' + id, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify({status:'已下架'})});
+                                if(!r.ok){ alert('更新失败'); return; }
+                            }
+                            showSubPanel('feedback-publish');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-feedback-publish-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载公告</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'feedback-create'){
+                const form = document.getElementById('feedback-create-form');
+                if(form && !form.dataset.bound){
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', async (e)=>{
+                        e.preventDefault();
+                        const payload = { title: form.title.value, content: form.content.value, publisher: form.publisher.value, status:'草稿' };
+                        const r = await fetch(API_BASE + '/api/feedback/announcements', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                        if(!r.ok){ alert('保存失败'); return; }
+                        hideSubPanel();
+                    });
+                }
+                return;
+            }
+            if(panelId === 'feedback-stats'){
+                try{
+                    const r = await fetch(API_BASE + '/api/feedback/stats', {cache:'no-store'});
+                    const stats = await r.json();
+                    const box = document.getElementById('panel-feedback-stats');
+                    if(box) box.textContent = `总数：${stats.total}，待处理：${stats.pending}，处理中：${stats.processing}，已完成：${stats.done}；民情反馈：${stats.types.feedback}，政务公开：${stats.types.public}`;
+                }catch(e){
+                    const box = document.getElementById('panel-feedback-stats');
+                    if(box) box.textContent = '无法加载统计数据';
+                }
+                return;
+            }
+            if(panelId === 'feedback-report'){
+                try{
+                    const r = await fetch(API_BASE + '/api/feedback/items', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-feedback-report-body');
+                    const keyword = document.getElementById('feedback-report-keyword');
+                    const status = document.getElementById('feedback-report-status');
+                    const refreshBtn = document.getElementById('feedback-report-refresh');
+                    if(!tbody) return;
+                    const render = (list)=>{
+                        const kw = (keyword?.value || '').trim();
+                        const st = status?.value || '';
+                        let rows = (list || []);
+                        if(kw) rows = rows.filter(i => (i.title||'').includes(kw));
+                        if(st) rows = rows.filter(i => (i.status||'') === st);
+                        tbody.innerHTML = rows.map(i=>`<tr><td>${i.title}</td><td>${i.type||'-'}</td><td>${i.reporter||'-'}</td><td>${i.status||'-'}</td><td>${i.created_at||'-'}</td></tr>`).join('') || '<tr><td colspan="5">暂无数据</td></tr>';
+                    };
+                    render(items);
+                    if(keyword && !keyword.dataset.bound){
+                        keyword.dataset.bound = '1';
+                        keyword.addEventListener('input', ()=>render(items));
+                    }
+                    if(status && !status.dataset.bound){
+                        status.dataset.bound = '1';
+                        status.addEventListener('change', ()=>render(items));
+                    }
+                    if(refreshBtn && !refreshBtn.dataset.bound){
+                        refreshBtn.dataset.bound = '1';
+                        refreshBtn.addEventListener('click', async ()=>{
+                            const fresh = await fetch(API_BASE + '/api/feedback/items', {cache:'no-store'});
+                            render(await fresh.json());
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-feedback-report-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载数据</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'feedback-analysis'){
+                try{
+                    const r = await fetch(API_BASE + '/api/feedback/stats', {cache:'no-store'});
+                    const stats = await r.json();
+                    const box = document.getElementById('panel-feedback-analysis');
+                    if(box) box.textContent = `当前反馈闭环率：${stats.done}/${stats.total}；处理中：${stats.processing}`;
+                }catch(e){
+                    const box = document.getElementById('panel-feedback-analysis');
+                    if(box) box.textContent = '无法加载分析数据';
                 }
                 return;
             }
@@ -1993,7 +4372,13 @@
                 if(form){
                     form.addEventListener('submit', async (e)=>{
                         e.preventDefault();
-                        const payload = { desc: form.desc.value, amount: Number(form.amount.value) };
+                        const payload = {
+                            description: form.desc.value,
+                            desc: form.desc.value,
+                            amount: Number(form.amount.value),
+                            category: form.category.value,
+                            owner: form.owner.value
+                        };
                         try{
                             const r = await fetch(API_BASE + '/api/finance/transactions', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
                             if(!r.ok) throw new Error('提交失败');
@@ -2192,15 +4577,154 @@
                 }
                 return;
             }
-            if(panelId.startsWith('ops-')){
+            if(panelId === 'ops-monitor'){
+                try{
+                    const r = await fetch(API_BASE + '/api/ops/monitor', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-ops-monitor-body');
+                    if(tbody) tbody.innerHTML = items.map(o=>`<tr><td>${o.metric}</td><td>${o.value}</td><td>${o.status}</td><td>${o.created_at||'-'}</td></tr>`).join('');
+                    const form = document.getElementById('ops-monitor-form');
+                    if(form && !form.dataset.bound){
+                        form.dataset.bound = '1';
+                        form.addEventListener('submit', async (e)=>{
+                            e.preventDefault();
+                            const payload = { metric: form.metric.value, value: form.value.value, status: form.status.value };
+                            const rr = await fetch(API_BASE + '/api/ops/monitor', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                            if(!rr.ok) { alert('保存失败'); return; }
+                            loadPanelData('ops-monitor');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-ops-monitor-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载监控数据</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'ops-health'){
+                try{
+                    const r = await fetch(API_BASE + '/api/ops/health', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-ops-health-body');
+                    if(tbody) tbody.innerHTML = items.map(o=>`<tr><td>${o.service}</td><td>${o.status}</td><td>${o.detail||'-'}</td><td>${o.checked_at||'-'}</td></tr>`).join('');
+                    const form = document.getElementById('ops-health-form');
+                    if(form && !form.dataset.bound){
+                        form.dataset.bound = '1';
+                        form.addEventListener('submit', async (e)=>{
+                            e.preventDefault();
+                            const payload = { service: form.service.value, status: form.status.value, detail: form.detail.value };
+                            const rr = await fetch(API_BASE + '/api/ops/health', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                            if(!rr.ok) { alert('保存失败'); return; }
+                            loadPanelData('ops-health');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-ops-health-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载健康检查</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'ops-log-search'){
+                try{
+                    const r = await fetch(API_BASE + '/api/ops/logs', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-ops-logs-body');
+                    if(tbody) tbody.innerHTML = items.map(o=>`<tr><td>${o.level}</td><td>${o.source||'-'}</td><td>${o.message}</td><td>${o.created_at||'-'}</td></tr>`).join('');
+                    const form = document.getElementById('ops-log-form');
+                    if(form && !form.dataset.bound){
+                        form.dataset.bound = '1';
+                        form.addEventListener('submit', async (e)=>{
+                            e.preventDefault();
+                            const payload = { level: form.level.value, source: form.source.value, message: form.message.value };
+                            const rr = await fetch(API_BASE + '/api/ops/logs', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                            if(!rr.ok) { alert('保存失败'); return; }
+                            loadPanelData('ops-log-search');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-ops-logs-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载日志</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'ops-log-report'){
+                try{
+                    const r = await fetch(API_BASE + '/api/ops/logs/report', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-ops-log-report-body');
+                    if(tbody) tbody.innerHTML = items.map(o=>`<tr><td>${o.level}</td><td>${o.count}</td></tr>`).join('');
+                }catch(e){
+                    const tbody = document.getElementById('panel-ops-log-report-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="2">无法加载报告</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'ops-backup'){
+                try{
+                    const r = await fetch(API_BASE + '/api/ops/backups', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-ops-backup-body');
+                    if(tbody) tbody.innerHTML = items.map(o=>`<tr><td>${o.target}</td><td>${o.type}</td><td>${o.status}</td><td>${o.operator}</td><td>${o.started_at||'-'}</td><td>${o.finished_at||'-'}</td></tr>`).join('');
+                    const form = document.getElementById('ops-backup-form');
+                    if(form && !form.dataset.bound){
+                        form.dataset.bound = '1';
+                        form.addEventListener('submit', async (e)=>{
+                            e.preventDefault();
+                            const payload = { target: form.target.value, type: form.type.value, operator: form.operator.value };
+                            const rr = await fetch(API_BASE + '/api/ops/backups', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                            if(!rr.ok) { alert('创建失败'); return; }
+                            loadPanelData('ops-backup');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-ops-backup-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="6">无法加载备份任务</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'ops-restore'){
+                try{
+                    const r = await fetch(API_BASE + '/api/ops/restores', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-ops-restore-body');
+                    if(tbody) tbody.innerHTML = items.map(o=>`<tr><td>${o.backup_id}</td><td>${o.status}</td><td>${o.operator}</td><td>${o.started_at||'-'}</td><td>${o.finished_at||'-'}</td></tr>`).join('');
+                    const form = document.getElementById('ops-restore-form');
+                    if(form && !form.dataset.bound){
+                        form.dataset.bound = '1';
+                        form.addEventListener('submit', async (e)=>{
+                            e.preventDefault();
+                            const payload = { backup_id: form.backup_id.value, operator: form.operator.value };
+                            const rr = await fetch(API_BASE + '/api/ops/restores', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+                            if(!rr.ok) { alert('执行失败'); return; }
+                            loadPanelData('ops-restore');
+                        });
+                    }
+                }catch(e){
+                    const tbody = document.getElementById('panel-ops-restore-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="5">无法加载恢复记录</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'ops-audit-search'){
                 try{
                     const r = await fetch(API_BASE + '/api/ops/audit', {cache:'no-store'});
                     const items = await r.json();
-                    const tbody = document.getElementById('panel-ops-body');
+                    const tbody = document.getElementById('panel-ops-audit-body');
                     if(tbody) tbody.innerHTML = items.map(o=>`<tr><td>${o.action}</td><td>${o.actor}</td><td>${o.status}</td><td>${o.created_at||'-'}</td></tr>`).join('');
                 }catch(e){
-                    const tbody = document.getElementById('panel-ops-body');
-                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载运维数据</td></tr>';
+                    const tbody = document.getElementById('panel-ops-audit-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4">无法加载审计数据</td></tr>';
+                }
+                return;
+            }
+            if(panelId === 'ops-audit-report'){
+                try{
+                    const r = await fetch(API_BASE + '/api/ops/audit/report', {cache:'no-store'});
+                    const items = await r.json();
+                    const tbody = document.getElementById('panel-ops-audit-report-body');
+                    if(tbody) tbody.innerHTML = items.map(o=>`<tr><td>${o.status}</td><td>${o.count}</td></tr>`).join('');
+                }catch(e){
+                    const tbody = document.getElementById('panel-ops-audit-report-body');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="2">无法加载合规报告</td></tr>';
                 }
                 return;
             }

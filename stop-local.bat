@@ -3,7 +3,7 @@ setlocal
 set BASEDIR=%~dp0
 set MYSQL_HOME=
 set MYSQL_BIN=
-for /r "%BASEDIR%runtime\mysql" %%f in (mysqladmin.exe) do (
+for /f "delims=" %%f in ('dir /b /s "%BASEDIR%runtime\mysql\mysqladmin.exe" 2^>nul') do (
   set MYSQL_BIN=%%~dpf
   goto found_mysql
 )

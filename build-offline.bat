@@ -2,25 +2,62 @@
 setlocal
 set BASEDIR=%~dp0
 set DIST=%BASEDIR%dist
-set JDK_MSI=%BASEDIR%OpenJDK8U-jdk_x64_windows_hotspot_8u472b08.msi
-set MYSQL_MSI=%BASEDIR%mysql-8.0.45-winx64.msi
+set JRE_ZIP=%BASEDIR%OpenJDK8U-jre_x64_windows_hotspot_8u472b08.zip
+set JDK_ZIP=%BASEDIR%OpenJDK8U-jdk_x64_windows_hotspot_8u472b08.zip
+set MYSQL_ZIP=%BASEDIR%mysql-8.0.45-winx64.zip
 
 if not exist "%DIST%" mkdir "%DIST%"
 
-if not exist "%JDK_MSI%" (
-  echo [ERROR] 未找到 JDK 安装包：%JDK_MSI%
+if exist "%JRE_ZIP%" (
+  set JAVA_ZIP=%JRE_ZIP%
+) else if exist "%JDK_ZIP%" (
+  set JAVA_ZIP=%JDK_ZIP%
+) else (
+  for /f "delims=" %%f in ('dir /b /a-d "%BASEDIR%OpenJDK*windows*hotspot*.zip" 2^>nul') do (
+    set JAVA_ZIP=%BASEDIR%%%f
+    goto found_java_zip
+  )
+)
+:found_java_zip
+if not defined JAVA_ZIP (
+  echo [ERROR] 未找到 JRE/JDK ZIP 便携版，请下载 ZIP 包并放到项目根目录。
   exit /b 1
 )
-if not exist "%MYSQL_MSI%" (
-  echo [ERROR] 未找到 MySQL 安装包：%MYSQL_MSI%
+echo [INFO] 解压 JRE/JDK ZIP 到 runtime\jre ...
+powershell -NoProfile -Command "Expand-Archive -Path '%JAVA_ZIP%' -DestinationPath '%BASEDIR%runtime\jre' -Force"
+
+if exist "%MYSQL_ZIP%" (
+  set MYSQL_ZIP_USE=%MYSQL_ZIP%
+) else (
+  for /f "delims=" %%f in ('dir /b /a-d "%BASEDIR%mysql-*-winx64.zip" 2^>nul') do (
+    set MYSQL_ZIP_USE=%BASEDIR%%%f
+    goto found_mysql_zip
+  )
+)
+:found_mysql_zip
+if not defined MYSQL_ZIP_USE (
+  echo [ERROR] 未找到 MySQL ZIP 便携版，请下载 ZIP 包并放到项目根目录。
   exit /b 1
 )
-
-echo [INFO] 解压 JDK 到 runtime\jre ...
-msiexec /a "%JDK_MSI%" /qn TARGETDIR="%BASEDIR%runtime\jre"
-
-echo [INFO] 解压 MySQL 到 runtime\mysql ...
-msiexec /a "%MYSQL_MSI%" /qn TARGETDIR="%BASEDIR%runtime\mysql"
+echo [INFO] 解压 MySQL ZIP 到 runtime\mysql ...
+powershell -NoProfile -Command "Expand-Archive -Path '%MYSQL_ZIP_USE%' -DestinationPath '%BASEDIR%runtime\mysql' -Force"
+if not exist "%BASEDIR%runtime\mysql\logs" mkdir "%BASEDIR%runtime\mysql\logs"
+if not exist "%BASEDIR%runtime\mysql\my.ini" (
+  > "%BASEDIR%runtime\mysql\my.ini" (
+    echo [mysqld]
+    echo basedir=.
+    echo datadir=./data
+    echo port=3306
+    echo bind-address=127.0.0.1
+    echo character-set-server=utf8mb4
+    echo collation-server=utf8mb4_general_ci
+    echo log-error=./logs/mysql.err
+    echo.
+    echo [client]
+    echo port=3306
+    echo default-character-set=utf8mb4
+  )
+)
 
 set JAR=%BASEDIR%village-admin-system\target\village-admin-system-0.1.0-SNAPSHOT-shaded.jar
 where mvn >nul 2>nul
