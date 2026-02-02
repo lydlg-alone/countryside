@@ -46,14 +46,26 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 - 后端：Java 8 HttpServer + JDBC（MySQL）。
 - 数据库：MySQL（便携版运行）。
 
-### 项目结构
+### 项目结构（详细）
 ```
-frontend/                 # 静态前端
-village-admin-system/     # Java 后端
-runtime/                  # 本地运行环境（JRE/MySQL）
-start-local.bat           # 启动后端+MySQL
-stop-local.bat            # 停止后端+MySQL
-start-backend.bat         # 仅启动后端
+.
+├─ frontend/                               # 静态前端
+│  └─ index.html                           # 主页面与前端逻辑
+├─ runtime/                                # 本地运行环境（JRE/MySQL）
+│  ├─ jre/                                 # 便携 JRE（需自行准备）
+│  ├─ mysql/                               # 便携 MySQL（需自行准备）
+│  └─ scripts/                             # 初始化脚本
+│     └─ init.sql                          # 初始化数据库与账号
+├─ village-admin-system/                   # Java 后端
+│  ├─ src/main/java/org/village/system/
+│  │  └─ Application.java                  # 后端入口与 API 实现
+│  └─ pom.xml                              # Maven 构建配置
+├─ build-offline.bat                       # 打包离线运行环境
+├─ start-local.bat                         # 启动后端+MySQL
+├─ stop-local.bat                          # 停止后端+MySQL
+├─ start-backend.bat                       # 仅启动后端
+├─ 雨湖区.geojson                          # 示例地图数据
+└─ README.md                               # 项目说明
 ```
 
 ### 主要数据库表（节选）
