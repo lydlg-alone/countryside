@@ -1,136 +1,80 @@
 ## Village 管理系统 — 项目说明
 
 ### 项目概述
-Village 管理系统是面向村级治理与服务的管理平台，提供一套以模块化、可扩展为目标的解决方案。面向村委、乡镇基层管理员及运维人员，核心目标为：增强治理效率、提升数据透明度、规范事务流转，支持AI 。
+Village 管理系统是面向村级治理与服务的轻量化管理平台，提供 Java 8 后端（HttpServer + JDBC）与静态前端页面。面向村委、乡镇基层管理员与运维人员，核心目标为：提升治理效率、规范流程、可视化展示与数据留痕。
 
 ### 核心功能
 
-- **1. 用户与权限模块（Auth & User）**
-	- 职责：用户身份管理、角色与权限控制、村民基础信息（证件/ID 卡）管理。
-	- 子模块：认证（登录/单点）、权限（RBAC）、用户资料、组织（村/小组）管理、密码/策略。
-	- 主要数据实体：User, Role, Permission, Resident
-	- 界面：登录页、用户管理、角色权限管理、居民信息台账。
+- **1. 首页看板（地图 + 村民信息）**
+	- 地图优先从数据库读取，空时回退在线地图。
+	- 支持缩放、拖动、分层显示（边界 / 区域名称 / 村民信息）。
+	- 管理员可在地图上新增村民点，并支持编辑与删除，数据入库。
 
-- **2. 财务与收支模块（Finance）**
-	- 职责：收支凭证录入、审核流程、对账与报表、预算与项目资金管理。
-	- 子模块：收支录入、审核工作流、报表导出（CSV/PDF）、凭证附件管理。
-	- 主要数据实体：Transaction, Account, Voucher, AuditRecord
-	- 界面：收支录入、审核列表、月度/年度报表、导出中心。
+- **2. 用户与权限管理**
+	- 用户新增、编辑、删除与登录。
+	- 角色与权限信息展示。
 
-- **3. 预警管理模块（Early Warning）**
-	- 职责：定义预警规则、实时检测、自动分派与通知、预警处置记录。
-	- 子模块：规则引擎、触发器、分派策略、预警历史与追踪。
-	- 主要数据实体：WarningRule, WarningEvent, Assignment, Escalation
-	- 界面：规则配置、预警看板、处置记录、导出与订阅设置。
+- **3. 财务与收支管理**
+	- 收支记录新增、列表、审核与统计。
+	- 前端表单提交后端落库。
 
-- **4. 基层治理与任务模块（Governance）**
-	- 职责：发布治理任务、签到/验收、积分规则与申报、活动管理。
-	- 子模块：任务发布、执行记录、积分核算、考核与督办。
-	- 主要数据实体：Task, Checkin, PointRecord, Activity
-	- 界面：任务发布、任务面板、积分查看、督办中心。
+- **4. 预警管理**
+	- 预警事件、规则、处置日志与统计。
+	- 支持处理状态更新与记录追踪。
 
-- **5. 民情反馈与政务公开模块（Feedback & Public）**
-	- 职责：收集民情、受理与流转、回应公开与统计、政务信息发布。
-	- 子模块：反馈渠道（APP/来访/电话）、受理流程、公开栏、互动统计。
-	- 主要数据实体：Feedback, Case, Announcement, Comment
-	- 界面：反馈受理台、进度查询、政务公开页、互动统计报表。
+- **5. 基层治理与任务**
+	- 任务发布、签到、验收、积分规则与活动管理。
+	- 任务与积分数据持久化。
 
-- **6. 产业看板模块（Industry Dashboard）**
-	- 职责：产业数据采集、关键指标展示、趋势分析、产业预警与建议。
-	- 子模块：基地管理、指标采集器、可视化面板、预测模型接入点。
-	- 主要数据实体：Base, ProductionMetric, Indicator, Forecast
-	- 界面：产业大屏、时序图、地块/基地详情页。
+- **6. 民情反馈与政务公开**
+	- 反馈受理、流程与公告管理。
+	- 统计报表与流程维护。
 
-- **7. AI 辅助模块（AI）**
-	- 职责：政策问答、自动摘要、智能建议、文本分类（可选接入外部模型或内部服务）。
-	- 子模块：大模型API接口、摘要/报告生成、模型管理、审计日志（模型调用）。
-	- 主要数据实体：AiRequest, AiResponse, ModelConfig
-	- 界面：智能问答、建议面板、模型设置（仅管理员）。
+- **7. 产业看板**
+	- 产业指标展示、趋势分析与预测视图。
 
-- **8. 运维与审计模块（Ops & Audit）**
-	- 职责：系统监控、日志管理、备份/恢复、数据清理、审计链路。
-	- 子模块：日志中心、备份任务、权限审计、作业调度（Cron）、健康检查。
-	- 主要数据实体：AuditLog, BackupJob, HealthCheck
-	- 界面：运维面板、审计查询、备份与恢复操作。
+- **8. AI 辅助**
+	- 智能问答、自动摘要、建议保存。
+	- 记录入库并可按类型查询。
 
-- **9. 公共与基础模块（Common）**
-	- 职责：跨模块通用能力（文件存储、通知、字典、缓存、错误处理、安全中间件）。
-	- 子模块：文件服务、消息推送（邮件/短信/站内）、字典管理、通用审核组件。
+- **9. 运维与审计**
+	- 监控指标、健康检查、日志中心、备份/恢复与审计查询。
+	- 全部子功能已接入数据库。
 
 ### 系统架构概要
-- 分层：前端（SPA 或多页面）、API 网关/后端服务（模块化微服务或单体模块化）、数据库（关系型 MySQL）、缓存（Redis）、对象存储（文件/附件）。
-- 安全：HTTPS、基于 Token 的认证（JWT/OAuth）、细粒度 RBAC 权限控制、操作审计与敏感字段加密。
-- 可扩展性：所有模块通过 REST 接口或消息总线（如 RabbitMQ/消息队列）解耦，AI 模块通过独立服务接入第三方或内部模型。
+- 前端：静态 HTML/CSS/JS。
+- 后端：Java 8 HttpServer + JDBC（MySQL）。
+- 数据库：MySQL（便携版运行）。
 
-### 项目结构（模块依赖）
-下面的目录结构示例严格按照核心模块与依赖关系组织，便于代码隔离与职责分明。
-
+### 项目结构
 ```
-village-admin-system
-│
-├── village-admin-common
-│
-├── village-admin-user
-│   ├── village-admin-common
-│   └── village-admin-logging 
-│
-├── village-admin-finance
-│   ├── village-admin-common
-│   └── village-admin-logging
-│
-├── village-admin-early-warning
-│   ├── village-admin-common
-│   ├── village-admin-user
-│   ├── village-admin-industry 
-│   └── village-admin-logging
-│
-├── village-admin-governance
-│   ├── village-admin-common
-│   └── village-admin-logging
-│
-├── village-admin-feedback
-│   ├── village-admin-common
-│   ├── village-admin-user
-│   └── village-admin-logging
-│
-├── village-admin-ops
-│   ├── village-admin-common
-│   └── village-admin-logging
-│
-├── village-admin-industry
-│   ├── village-admin-common
-│   └── village-admin-logging
-│
-├── village-admin-ai
-│   ├── village-admin-common
-│   └── village-admin-logging
-│
-├── village-admin-logging
-│   └── village-admin-common
-│
-└── village-admin-generator
-	└── village-admin-common
+frontend/                 # 静态前端
+village-admin-system/     # Java 后端
+runtime/                  # 本地运行环境（JRE/MySQL）
+start-local.bat           # 启动后端+MySQL
+stop-local.bat            # 停止后端+MySQL
+start-backend.bat         # 仅启动后端
+```
 
-
-### 主要数据库表
-- User(id, username, password_hash, name, mobile, role_id, org_id, created_at)
-- Role(id, name, permissions)
-- Resident(id, name, id_card, address, household, phone)
-- Transaction(id, type, amount, account_id, voucher_id, status, created_by, created_at)
-- WarningRule(id, name, condition, severity, enabled)
-- WarningEvent(id, rule_id, target_id, severity, status, triggered_at)
-- Task(id, title, description, assigned_to, status, due_date)
-- Feedback(id, source, content, status, assigned_to, created_at)
+### 主要数据库表（节选）
+- users, transactions, warnings, warning_logs
+- industry_metrics, map_data, residents, ai_records
+- ops_audit, ops_monitor, ops_health, ops_logs, ops_backups, ops_restores
+- gov_tasks, gov_checkins, gov_acceptance, gov_point_rules, gov_point_audit, gov_activities
+- feedback_items, feedback_flow, feedback_announcements
 
 ### 接口设计（REST 风格，JSON）
-- 登录：`POST /api/auth/login` {username,password} -> {token,user}
-- 用户：`GET /api/users/{id}`、`POST /api/users`、`PUT /api/users/{id}`
-- 收支：`POST /api/finance/transactions`、`GET /api/finance/reports?month=2025-01`
+- 登录：`POST /api/auth/login`
+- 用户：`GET /api/users`、`POST /api/users`、`PUT /api/users/{id}`
+- 收支：`GET /api/finance/transactions`、`POST /api/finance/transactions`
 - 预警：`GET /api/warnings/events`、`POST /api/warnings/rules`
+- 地图：`GET /api/map`
+- 村民：`GET /api/residents`、`POST /api/residents`、`PUT /api/residents/{id}`、`DELETE /api/residents/{id}`
+- 运维：`/api/ops/monitor`、`/api/ops/health`、`/api/ops/logs`、`/api/ops/backups`、`/api/ops/restores`、`/api/ops/audit`
 
 ### 部署与运行（技术栈）
-- Java1.8，构建：Maven，数据库：MySQL（本地便携版），缓存：Redis（可选）。
-- Docker 已停用，改为本地一键启动脚本（Windows）。
+- Java 8，构建：Maven，数据库：MySQL（本地便携版）。
+- Docker 未使用，采用 Windows 本地一键启动脚本。
 
 ### 前端开发与本地运行
 
@@ -151,7 +95,7 @@ village-admin-system
 ### 离线包打包流程
 1. 将 JRE/MySQL 安装包放在项目根目录：
 	- OpenJDK8U-jre_x64_windows_hotspot_8u472b08.zip（或 OpenJDK8U-jdk_x64_windows_hotspot_8u472b08.zip）
-	- mysql-8.0.45-winx64.zip
+	- mysql-8.0.36-winx64.zip
 2. 运行 [build-offline.bat](build-offline.bat)，会自动解压到 runtime 目录，并生成 dist/countryside-offline.zip。
 
 ### 离线包运行流程
