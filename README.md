@@ -94,9 +94,13 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 #### 本地一键启动（Windows）
 1. 将 JRE 解压到 `runtime\jre`（需包含 `bin\java.exe`）。
 2. 将 MySQL 便携版解压到 `runtime\mysql`（需包含 `bin\mysqld.exe`）。
-3. 运行项目根目录 `start-local.bat`。
+3. 运行项目根目录 `start-local.bat`（会同时启动 MySQL + 后端，窗口保持不退出）。
 
 停止服务：运行 `stop-local.bat`。
+
+#### 仅启动后端（需要 MySQL 已启动）
+- 先确保 MySQL 正在运行（可先运行 `start-local.bat` 让其保持运行）。
+- 运行 `start-backend.bat` 启动后端（前台运行，Ctrl+C 可结束；窗口保持不退出）。
 
 ## Windows 离线包说明
 

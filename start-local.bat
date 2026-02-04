@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 setlocal
 pushd %~dp0
 set BASEDIR=%CD%
@@ -78,9 +79,12 @@ set DB_PASS=villagepass
 
 set JAR=%BASEDIR%\village-admin-system\target\village-admin-system-0.1.0-SNAPSHOT-shaded.jar
 if not exist "%JAR%" (
+  set JAR=%BASEDIR%\village-admin-system\target\village-admin-system-0.1.0-SNAPSHOT.jar
+)
+if not exist "%JAR%" (
   echo [ERROR] 未找到后端 Jar，请先构建：
   echo mvn -f "%BASEDIR%\village-admin-system\pom.xml" package -DskipTests
-  exit /b 1
+  call :fail
 )
 
 > "%START_DEBUG%" (
@@ -93,13 +97,22 @@ if not exist "%JAR%" (
   echo JAR=%JAR%
 )
 
-echo [INFO] 启动后端...
-start "" /B "%JAVA_HOME%\bin\java.exe" -jar "%JAR%" 1> "%APP_OUT%" 2> "%APP_ERR%"
-
-echo [INFO] 后端日志：runtime\logs\app.log
-echo [INFO] 错误日志：runtime\logs\app.err
-echo [INFO] 启动信息：runtime\logs\start-debug.txt
-echo [INFO] 后端已启动：http://localhost:8080
-echo [INFO] 前端请手动打开：frontend\index.html
+echo([INFO] 启动后端...
+echo([INFO] 后端将前台运行，关闭窗口会停止服务
+echo([INFO] 标准输出日志: runtime\logs\app.log
+echo([INFO] 错误日志: runtime\logs\app.err
+echo([INFO] 启动信息: runtime\logs\start-debug.txt
+echo([INFO] 后端已启动: http://localhost:8080
+echo([INFO] 前端请手动打开: frontend\index.html
+"%JAVA_EXE%" -jar "%JAR%" 1>>"%APP_OUT%" 2>>"%APP_ERR%"
 popd
 endlocal
+
+goto :eof
+
+:fail
+echo.
+echo [INFO] 请修复上述问题后重试
+:fail_wait
+pause
+goto fail_wait

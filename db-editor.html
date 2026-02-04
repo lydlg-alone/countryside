@@ -107,6 +107,33 @@
     </table>
   </section>
 
+  <section class="panel" id="panel-map">
+    <h3 class="section-title">地图数据</h3>
+    <div class="grid">
+      <input id="mapName" placeholder="地图名称" />
+      <button class="secondary" id="loadMap">加载数据库地图</button>
+      <button id="saveMap">保存地图内容</button>
+    </div>
+    <textarea id="mapContent" rows="10" placeholder="GeoJSON 内容"></textarea>
+    <div class="muted" id="mapMeta"></div>
+  </section>
+
+  <section class="panel" id="panel-residents">
+    <h3 class="section-title">村民信息点</h3>
+    <div class="grid">
+      <input id="residentName" placeholder="姓名" />
+      <input id="residentAddress" placeholder="地址" />
+      <input id="residentPhone" placeholder="电话" />
+      <input id="residentX" placeholder="X 坐标" />
+      <input id="residentY" placeholder="Y 坐标" />
+      <button id="addResident">新增村民点</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>姓名</th><th>地址</th><th>电话</th><th>X</th><th>Y</th><th>操作</th></tr></thead>
+      <tbody id="residentsBody"></tbody>
+    </table>
+  </section>
+
   <section class="panel" id="panel-industry">
     <h3 class="section-title">产业指标</h3>
     <div class="grid">
@@ -148,11 +175,96 @@
     </table>
   </section>
 
-  <section class="panel" id="panel-ops">
-    <h3 class="section-title">运维审计（只读）</h3>
+  <section class="panel" id="panel-ops-monitor">
+    <h3 class="section-title">运维监控</h3>
+    <div class="grid">
+      <input id="opsMetric" placeholder="指标名称" />
+      <input id="opsValue" placeholder="指标值" />
+      <input id="opsStatus" placeholder="状态" />
+      <button id="addOpsMetric">新增指标</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>指标</th><th>数值</th><th>状态</th><th>时间</th></tr></thead>
+      <tbody id="opsMonitorBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-health">
+    <h3 class="section-title">健康检查</h3>
+    <div class="grid">
+      <input id="opsService" placeholder="服务名称" />
+      <input id="opsHealthStatus" placeholder="状态" />
+      <input id="opsDetail" placeholder="详情" />
+      <button id="addOpsHealth">记录检查</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>服务</th><th>状态</th><th>详情</th><th>时间</th></tr></thead>
+      <tbody id="opsHealthBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-logs">
+    <h3 class="section-title">日志中心</h3>
+    <div class="grid">
+      <input id="opsLogLevel" placeholder="级别" />
+      <input id="opsLogSource" placeholder="来源" />
+      <input id="opsLogMessage" placeholder="内容" />
+      <button id="addOpsLog">记录日志</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>级别</th><th>来源</th><th>内容</th><th>时间</th></tr></thead>
+      <tbody id="opsLogsBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-log-report">
+    <h3 class="section-title">日志分析报告</h3>
+    <table>
+      <thead><tr><th>级别</th><th>数量</th></tr></thead>
+      <tbody id="opsLogReportBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-backups">
+    <h3 class="section-title">备份任务</h3>
+    <div class="grid">
+      <input id="opsBackupTarget" placeholder="备份对象" />
+      <input id="opsBackupType" placeholder="类型" />
+      <input id="opsBackupOperator" placeholder="执行人" />
+      <button id="addOpsBackup">创建备份</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>对象</th><th>类型</th><th>状态</th><th>执行人</th><th>开始时间</th><th>完成时间</th></tr></thead>
+      <tbody id="opsBackupsBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-restores">
+    <h3 class="section-title">恢复操作</h3>
+    <div class="grid">
+      <input id="opsRestoreBackupId" placeholder="备份ID" />
+      <input id="opsRestoreOperator" placeholder="执行人" />
+      <button id="addOpsRestore">执行恢复</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>备份ID</th><th>状态</th><th>执行人</th><th>开始时间</th><th>完成时间</th></tr></thead>
+      <tbody id="opsRestoresBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-audit">
+    <h3 class="section-title">审计查询</h3>
     <table>
       <thead><tr><th>ID</th><th>动作</th><th>操作者</th><th>状态</th><th>时间</th></tr></thead>
-      <tbody id="opsBody"></tbody>
+      <tbody id="opsAuditBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-audit-report">
+    <h3 class="section-title">合规报告</h3>
+    <table>
+      <thead><tr><th>状态</th><th>数量</th></tr></thead>
+      <tbody id="opsAuditReportBody"></tbody>
     </table>
   </section>
 
@@ -161,9 +273,18 @@
       { id: 'users', label: '用户' },
       { id: 'transactions', label: '财务' },
       { id: 'warnings', label: '预警' },
+      { id: 'map', label: '地图' },
+      { id: 'residents', label: '村民' },
       { id: 'industry', label: '产业' },
       { id: 'ai', label: 'AI记录' },
-      { id: 'ops', label: '运维审计' }
+      { id: 'ops-monitor', label: '运维监控' },
+      { id: 'ops-health', label: '健康检查' },
+      { id: 'ops-logs', label: '日志中心' },
+      { id: 'ops-log-report', label: '日志报告' },
+      { id: 'ops-backups', label: '备份任务' },
+      { id: 'ops-restores', label: '恢复操作' },
+      { id: 'ops-audit', label: '审计查询' },
+      { id: 'ops-audit-report', label: '合规报告' }
     ];
 
     const apiBaseInput = document.getElementById('apiBase');
@@ -266,6 +387,62 @@
       });
     }
 
+    async function loadMap() {
+      const meta = document.getElementById('mapMeta');
+      const mapName = document.getElementById('mapName');
+      const mapContent = document.getElementById('mapContent');
+      meta.textContent = '';
+      const data = await request('/api/map');
+      if (!data) return;
+      mapName.value = data.name || '';
+      mapContent.value = data.content || '';
+      if (data.updated_at || data.created_at) {
+        meta.textContent = `更新时间：${data.updated_at || data.created_at}`;
+      }
+    }
+
+    async function loadResidents() {
+      const body = document.getElementById('residentsBody');
+      body.innerHTML = '';
+      const list = await request('/api/residents');
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.id}</td><td>${r.name || ''}</td><td>${r.address || ''}</td><td>${r.phone || ''}</td><td>${r.x ?? ''}</td><td>${r.y ?? ''}</td>`;
+        const actionTd = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'row-actions';
+        const editBtn = document.createElement('button');
+        editBtn.className = 'secondary';
+        editBtn.textContent = '编辑';
+        editBtn.onclick = async () => {
+          const name = prompt('姓名', r.name || '');
+          if (name === null) return;
+          const address = prompt('地址', r.address || '');
+          if (address === null) return;
+          const phone = prompt('电话', r.phone || '');
+          if (phone === null) return;
+          const x = prompt('X 坐标', r.x ?? '');
+          if (x === null) return;
+          const y = prompt('Y 坐标', r.y ?? '');
+          if (y === null) return;
+          await request(`/api/residents/${r.id}`, { method: 'PUT', body: JSON.stringify({ name, address, phone, x, y }) });
+          await loadResidents();
+        };
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '删除';
+        delBtn.onclick = async () => {
+          if (!confirm('确认删除该村民点？')) return;
+          await request(`/api/residents/${r.id}`, { method: 'DELETE' });
+          await loadResidents();
+        };
+        wrap.append(editBtn, delBtn);
+        actionTd.appendChild(wrap);
+        tr.appendChild(actionTd);
+        body.appendChild(tr);
+      });
+    }
+
     async function loadMetrics() {
       const body = document.getElementById('metricBody');
       body.innerHTML = '';
@@ -330,13 +507,90 @@
       });
     }
 
+    async function loadOpsMonitor() {
+      const body = document.getElementById('opsMonitorBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/monitor');
+      list.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${m.id}</td><td>${m.metric || ''}</td><td>${m.value || ''}</td><td>${m.status || ''}</td><td>${m.created_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsHealth() {
+      const body = document.getElementById('opsHealthBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/health');
+      list.forEach(h => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${h.id}</td><td>${h.service || ''}</td><td>${h.status || ''}</td><td>${h.detail || ''}</td><td>${h.checked_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsLogs() {
+      const body = document.getElementById('opsLogsBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/logs');
+      list.forEach(l => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${l.id}</td><td>${l.level || ''}</td><td>${l.source || ''}</td><td>${l.message || ''}</td><td>${l.created_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsLogReport() {
+      const body = document.getElementById('opsLogReportBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/logs/report');
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.level || ''}</td><td>${r.count ?? ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsBackups() {
+      const body = document.getElementById('opsBackupsBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/backups');
+      list.forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${b.id}</td><td>${b.target || ''}</td><td>${b.type || ''}</td><td>${b.status || ''}</td><td>${b.operator || ''}</td><td>${b.started_at || ''}</td><td>${b.finished_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsRestores() {
+      const body = document.getElementById('opsRestoresBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/restores');
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.id}</td><td>${r.backup_id || ''}</td><td>${r.status || ''}</td><td>${r.operator || ''}</td><td>${r.started_at || ''}</td><td>${r.finished_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
     async function loadOpsAudit() {
-      const body = document.getElementById('opsBody');
+      const body = document.getElementById('opsAuditBody');
       body.innerHTML = '';
       const list = await request('/api/ops/audit');
       list.forEach(o => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${o.id}</td><td>${o.action}</td><td>${o.actor}</td><td>${o.status}</td><td>${o.created_at}</td>`;
+        tr.innerHTML = `<td>${o.id}</td><td>${o.action || ''}</td><td>${o.actor || ''}</td><td>${o.status || ''}</td><td>${o.created_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsAuditReport() {
+      const body = document.getElementById('opsAuditReportBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/audit/report');
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.status || ''}</td><td>${r.count ?? ''}</td>`;
         body.appendChild(tr);
       });
     }
@@ -364,6 +618,25 @@
       await loadWarnings();
     };
 
+    document.getElementById('loadMap').onclick = loadMap;
+
+    document.getElementById('saveMap').onclick = async () => {
+      const name = document.getElementById('mapName').value;
+      const content = document.getElementById('mapContent').value;
+      await request('/api/map', { method: 'POST', body: JSON.stringify({ name, content }) });
+      await loadMap();
+    };
+
+    document.getElementById('addResident').onclick = async () => {
+      const name = document.getElementById('residentName').value;
+      const address = document.getElementById('residentAddress').value;
+      const phone = document.getElementById('residentPhone').value;
+      const x = document.getElementById('residentX').value;
+      const y = document.getElementById('residentY').value;
+      await request('/api/residents', { method: 'POST', body: JSON.stringify({ name, address, phone, x, y }) });
+      await loadResidents();
+    };
+
     document.getElementById('addMetric').onclick = async () => {
       const name = document.getElementById('metricName').value;
       const value = document.getElementById('metricValue').value;
@@ -380,6 +653,46 @@
       await loadAiRecords();
     };
 
+    document.getElementById('addOpsMetric').onclick = async () => {
+      const metric = document.getElementById('opsMetric').value;
+      const value = document.getElementById('opsValue').value;
+      const status = document.getElementById('opsStatus').value;
+      await request('/api/ops/monitor', { method: 'POST', body: JSON.stringify({ metric, value, status }) });
+      await loadOpsMonitor();
+    };
+
+    document.getElementById('addOpsHealth').onclick = async () => {
+      const service = document.getElementById('opsService').value;
+      const status = document.getElementById('opsHealthStatus').value;
+      const detail = document.getElementById('opsDetail').value;
+      await request('/api/ops/health', { method: 'POST', body: JSON.stringify({ service, status, detail }) });
+      await loadOpsHealth();
+    };
+
+    document.getElementById('addOpsLog').onclick = async () => {
+      const level = document.getElementById('opsLogLevel').value;
+      const source = document.getElementById('opsLogSource').value;
+      const message = document.getElementById('opsLogMessage').value;
+      await request('/api/ops/logs', { method: 'POST', body: JSON.stringify({ level, source, message }) });
+      await loadOpsLogs();
+      await loadOpsLogReport();
+    };
+
+    document.getElementById('addOpsBackup').onclick = async () => {
+      const target = document.getElementById('opsBackupTarget').value;
+      const type = document.getElementById('opsBackupType').value;
+      const operator = document.getElementById('opsBackupOperator').value;
+      await request('/api/ops/backups', { method: 'POST', body: JSON.stringify({ target, type, operator }) });
+      await loadOpsBackups();
+    };
+
+    document.getElementById('addOpsRestore').onclick = async () => {
+      const backup_id = document.getElementById('opsRestoreBackupId').value;
+      const operator = document.getElementById('opsRestoreOperator').value;
+      await request('/api/ops/restores', { method: 'POST', body: JSON.stringify({ backup_id, operator }) });
+      await loadOpsRestores();
+    };
+
     document.getElementById('refreshAi').onclick = loadAiRecords;
 
     refreshAllBtn.onclick = async () => {
@@ -387,9 +700,18 @@
         loadUsers(),
         loadTransactions(),
         loadWarnings(),
+        loadMap(),
+        loadResidents(),
         loadMetrics(),
         loadAiRecords(),
-        loadOpsAudit()
+        loadOpsMonitor(),
+        loadOpsHealth(),
+        loadOpsLogs(),
+        loadOpsLogReport(),
+        loadOpsBackups(),
+        loadOpsRestores(),
+        loadOpsAudit(),
+        loadOpsAuditReport()
       ]);
     };
 
