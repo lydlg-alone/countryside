@@ -64,6 +64,7 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 ├─ start-local.bat                         # 启动后端+MySQL
 ├─ stop-local.bat                          # 停止后端+MySQL
 ├─ start-backend.bat                       # 仅启动后端
+├─ start-frontend.bat                      # 启动前端静态服务
 ├─ 雨湖区.geojson                          # 示例地图数据
 └─ README.md                               # 项目说明
 ```
@@ -116,6 +117,7 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 3. 打开 frontend/index.html 使用系统。
 #### 前端使用方式
 - 直接打开 `frontend\index.html`。
+- 或运行 `start-frontend.bat`（会启动本地静态服务并自动打开页面）。
 - 后端默认地址为 `http://localhost:8080`。
 
 #### 本地开发（可选）
