@@ -124,7 +124,7 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 - 后端默认地址为 `http://localhost:8080`。
 
 #### 数据库编辑工具
-- `db-editor.html` 需要 root 码 `wslydlg` 才能进入。
+- `db-editor.html` 需要 root 码 `lydlg` 才能进入。
 
 #### 本地开发（可选）
 ```powershell

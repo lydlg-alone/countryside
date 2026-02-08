@@ -48,9 +48,30 @@
     .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
     .muted { color: var(--muted); font-size: 12px; }
     .section-title { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+    .root-login { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .root-card { background: #fff; padding: 20px; border-radius: 10px; width: 320px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .root-card h3 { margin: 0 0 10px; font-size: 16px; }
+    .root-card input { width: 100%; }
+    .root-actions { margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end; }
   </style>
 </head>
 <body>
+  <div class="root-login" id="root-login">
+    <div class="root-card">
+      <h3>Root 验证</h3>
+      <div class="muted">请输入 root 码以进入工具</div>
+      <div style="margin-top:10px;">
+        <input id="rootCode" type="password" placeholder="root 码" />
+      </div>
+      <div class="root-actions">
+        <button class="secondary" id="root-cancel" type="button">关闭</button>
+        <button id="root-enter" type="button">进入</button>
+      </div>
+      <div class="muted" id="root-error" style="margin-top:8px;color:#dc2626;"></div>
+    </div>
+  </div>
+
+  <div id="app-root" style="display:none;">
   <header>
     <div>
       <h1>Village 数据库数据编辑工具</h1>
@@ -70,7 +91,10 @@
     <h3 class="section-title">用户管理</h3>
     <div class="grid">
       <input id="userName" placeholder="姓名" />
-      <input id="userRole" placeholder="角色" />
+      <select id="userRole">
+        <option value="管理员">管理员</option>
+        <option value="普通用户">普通用户</option>
+      </select>
       <input id="userUsername" placeholder="用户名" />
       <input id="userPassword" placeholder="密码" />
       <button id="addUser">新增用户</button>
@@ -270,6 +294,8 @@
     </table>
   </section>
 
+  </div>
+
   <script>
     const tabs = [
       { id: 'users', label: '用户' },
@@ -299,6 +325,37 @@
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
       document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tabId}`));
     }
+
+    const rootLogin = document.getElementById('root-login');
+    const appRoot = document.getElementById('app-root');
+    const rootError = document.getElementById('root-error');
+    const rootCodeInput = document.getElementById('rootCode');
+
+    function showRootLogin(){
+      rootLogin.style.display = 'flex'; // Show root login by default
+      appRoot.style.display = 'none';
+      rootError.textContent = '';
+      rootCodeInput.value = '';
+      rootCodeInput.focus();
+    }
+
+    function hideRootLogin(){
+      rootLogin.style.display = 'none';
+      appRoot.style.display = 'block'; // Hide app until validated
+    }
+
+    document.getElementById('root-enter').onclick = () => {
+      if (rootCodeInput.value === 'lydlg') {
+        sessionStorage.setItem('root-ok', '1');
+        hideRootLogin();
+        refreshAllBtn.onclick();
+      } else {
+        rootError.textContent = 'root 码错误';
+      }
+    };
+    document.getElementById('root-cancel').onclick = () => {
+      rootError.textContent = '已关闭，请重新打开页面';
+    };
 
     tabs.forEach((t, idx) => {
       const btn = document.createElement('div');
@@ -333,9 +390,16 @@
         editBtn.onclick = async () => {
           const name = prompt('姓名', u.name);
           if (name === null) return;
-          const role = prompt('角色', u.role);
+          const role = prompt('角色(管理员/普通用户)', u.role || '普通用户');
           if (role === null) return;
-          await request(`/api/users/${u.id}`, { method: 'PUT', body: JSON.stringify({ name, role }) });
+          const username = prompt('用户名', u.username || '');
+          if (username === null) return;
+          const password = prompt('密码（留空不修改）', '');
+          if (password === null) return;
+          const payload = { name, role, plainPassword: 'true' };
+          if (username.trim() !== '') payload.username = username.trim();
+          if (password.trim() !== '') payload.password = password;
+          await request(`/api/users/${u.id}`, { method: 'PUT', body: JSON.stringify(payload) });
           await loadUsers();
         };
         const delBtn = document.createElement('button');
@@ -602,7 +666,7 @@
       const role = document.getElementById('userRole').value;
       const username = document.getElementById('userUsername').value;
       const password = document.getElementById('userPassword').value;
-      await request('/api/users', { method: 'POST', body: JSON.stringify({ name, role, username, password }) });
+      await request('/api/users', { method: 'POST', body: JSON.stringify({ name, role, username, password, plainPassword: 'true' }) });
       await loadUsers();
     };
 
@@ -736,7 +800,12 @@
 
     (async () => {
       try {
-        await refreshAllBtn.onclick();
+        if (sessionStorage.getItem('root-ok') === '1') {
+          hideRootLogin();
+          await refreshAllBtn.onclick();
+        } else {
+          showRootLogin();
+        }
       } catch (err) {
         alert('加载失败：' + err.message);
       }
