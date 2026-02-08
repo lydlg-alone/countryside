@@ -111,10 +111,12 @@
     <h3 class="section-title">地图数据</h3>
     <div class="grid">
       <input id="mapName" placeholder="地图名称" />
+      <input id="mapSvgFile" type="file" accept="image/svg+xml,.svg,.SVG" />
+      <button class="secondary" id="importSvg">导入SVG</button>
       <button class="secondary" id="loadMap">加载数据库地图</button>
       <button id="saveMap">保存地图内容</button>
     </div>
-    <textarea id="mapContent" rows="10" placeholder="GeoJSON 内容"></textarea>
+    <textarea id="mapContent" rows="10" placeholder="SVG 内容"></textarea>
     <div class="muted" id="mapMeta"></div>
   </section>
 
@@ -397,7 +399,7 @@
       mapName.value = data.name || '';
       mapContent.value = data.content || '';
       if (data.updated_at || data.created_at) {
-        meta.textContent = `更新时间：${data.updated_at || data.created_at}`;
+        meta.textContent = `更新时间：${data.updated_at || data.created_at}，类型：SVG`;
       }
     }
 
@@ -620,10 +622,27 @@
 
     document.getElementById('loadMap').onclick = loadMap;
 
+    const mapSvgFileInput = document.getElementById('mapSvgFile');
+    const importSvgBtn = document.getElementById('importSvg');
+
+    async function handleSvgFile(file) {
+      if (!file) return;
+      const text = await file.text();
+      document.getElementById('mapContent').value = text;
+    }
+
+    importSvgBtn.onclick = () => {
+      mapSvgFileInput.click();
+    };
+
+    mapSvgFileInput.addEventListener('change', async () => {
+      await handleSvgFile(mapSvgFileInput.files && mapSvgFileInput.files[0]);
+    });
+
     document.getElementById('saveMap').onclick = async () => {
-      const name = document.getElementById('mapName').value;
+      const name = document.getElementById('mapName').value || '主目录地图';
       const content = document.getElementById('mapContent').value;
-      await request('/api/map', { method: 'POST', body: JSON.stringify({ name, content }) });
+      await request('/api/map', { method: 'POST', body: JSON.stringify({ name, type: 'svg', content }) });
       await loadMap();
     };
 

@@ -136,7 +136,7 @@ public class Application {
         String w = "CREATE TABLE IF NOT EXISTS warnings (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), msg TEXT, severity VARCHAR(50), status VARCHAR(50), assignee VARCHAR(64), handler VARCHAR(64), notify_status VARCHAR(32), handled_at VARCHAR(64), triggered_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String wl = "CREATE TABLE IF NOT EXISTS warning_logs (id INT AUTO_INCREMENT PRIMARY KEY, warning_id INT, action VARCHAR(64), actor VARCHAR(64), note VARCHAR(255), created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String im = "CREATE TABLE IF NOT EXISTS industry_metrics (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), value_num INT, unit VARCHAR(32), updated_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-        String md = "CREATE TABLE IF NOT EXISTS map_data (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), content LONGTEXT, created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        String md = "CREATE TABLE IF NOT EXISTS map_data (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), content LONGTEXT, map_type VARCHAR(16), created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String rs = "CREATE TABLE IF NOT EXISTS residents (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), address VARCHAR(255), phone VARCHAR(64), x_num INT, y_num INT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String ai = "CREATE TABLE IF NOT EXISTS ai_records (id INT AUTO_INCREMENT PRIMARY KEY, type VARCHAR(32), question TEXT, answer TEXT, created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String oa = "CREATE TABLE IF NOT EXISTS ops_audit (id INT AUTO_INCREMENT PRIMARY KEY, action_desc VARCHAR(255), actor VARCHAR(64), status VARCHAR(32), created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
@@ -174,6 +174,7 @@ public class Application {
             try { s.execute("ALTER TABLE warnings ADD COLUMN handler VARCHAR(64)"); } catch (Exception ignored) {}
             try { s.execute("ALTER TABLE warnings ADD COLUMN notify_status VARCHAR(32)"); } catch (Exception ignored) {}
             try { s.execute("ALTER TABLE warnings ADD COLUMN handled_at VARCHAR(64)"); } catch (Exception ignored) {}
+            try { s.execute("ALTER TABLE map_data ADD COLUMN map_type VARCHAR(16)"); } catch (Exception ignored) {}
         }
     }
 
@@ -193,12 +194,12 @@ public class Application {
         return dataSource.getConnection();
     }
 
-    private static String loadGeoJsonFromFile(){
+    private static String loadSvgFromFile(){
         String[] candidates = new String[]{
-                "雨湖区.geojson",
-                Paths.get(System.getProperty("user.dir"), "雨湖区.geojson").toString(),
-                Paths.get(System.getProperty("user.dir"), "..", "雨湖区.geojson").toString(),
-                Paths.get(System.getProperty("user.dir"), "..", "..", "雨湖区.geojson").toString()
+                "地图.svg",
+                Paths.get(System.getProperty("user.dir"), "地图.svg").toString(),
+                Paths.get(System.getProperty("user.dir"), "..", "地图.svg").toString(),
+                Paths.get(System.getProperty("user.dir"), "..", "..", "地图.svg").toString()
         };
         for (String p : candidates){
             try {
@@ -213,26 +214,28 @@ public class Application {
 
     private static void ensureSampleMapData(java.sql.Connection c){
         try {
-            String sampleGeo = loadGeoJsonFromFile();
-            if (sampleGeo == null || sampleGeo.trim().isEmpty()) return;
+            String sampleSvg = loadSvgFromFile();
+            if (sampleSvg == null || sampleSvg.trim().isEmpty()) return;
             try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
-                ps.setString(1, "雨湖区示例地图");
+                ps.setString(1, "主目录地图");
                 java.sql.ResultSet rs = ps.executeQuery();
                 if (rs.next()){
                     int id = rs.getInt("id");
-                    try (java.sql.PreparedStatement ups = c.prepareStatement("UPDATE map_data SET content=?, created_at=? WHERE id=?")){
-                        ups.setString(1, sampleGeo);
-                        ups.setString(2, java.time.Instant.now().toString());
-                        ups.setInt(3, id);
+                    try (java.sql.PreparedStatement ups = c.prepareStatement("UPDATE map_data SET content=?, map_type=?, created_at=? WHERE id=?")){
+                        ups.setString(1, sampleSvg);
+                        ups.setString(2, "svg");
+                        ups.setString(3, java.time.Instant.now().toString());
+                        ups.setInt(4, id);
                         ups.executeUpdate();
                     }
                     return;
                 }
             }
-            try (java.sql.PreparedStatement ins = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
-                ins.setString(1, "雨湖区示例地图");
-                ins.setString(2, sampleGeo);
-                ins.setString(3, java.time.Instant.now().toString());
+            try (java.sql.PreparedStatement ins = c.prepareStatement("INSERT INTO map_data (name,content,map_type,created_at) VALUES (?,?,?,?)")){
+                ins.setString(1, "主目录地图");
+                ins.setString(2, sampleSvg);
+                ins.setString(3, "svg");
+                ins.setString(4, java.time.Instant.now().toString());
                 ins.executeUpdate();
             }
         } catch (Exception ignored) {
@@ -258,22 +261,24 @@ public class Application {
             }
             rs = s.executeQuery("SELECT COUNT(*) FROM map_data"); rs.next();
             int mapCount = rs.getInt(1);
-            String sampleGeo = loadGeoJsonFromFile();
+            String sampleSvg = loadSvgFromFile();
             if (mapCount == 0){
-                String geo = sampleGeo != null ? sampleGeo : "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"name\":\"村域\"},\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[1000,0],[1000,600],[0,600],[0,0]]]}}]}";
-                try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
-                    ps.setString(1, sampleGeo != null ? "雨湖区示例地图" : "默认村落地图");
-                    ps.setString(2, geo);
-                    ps.setString(3, java.time.Instant.now().toString());
+                String svg = sampleSvg != null ? sampleSvg : "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1000 600\"><rect x=\"0\" y=\"0\" width=\"1000\" height=\"600\" fill=\"#e2e8f0\" stroke=\"#94a3b8\" stroke-width=\"2\"/></svg>";
+                try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,map_type,created_at) VALUES (?,?,?,?)")){
+                    ps.setString(1, sampleSvg != null ? "主目录地图" : "默认村落地图");
+                    ps.setString(2, svg);
+                    ps.setString(3, "svg");
+                    ps.setString(4, java.time.Instant.now().toString());
                     ps.executeUpdate();
                 }
-            } else if (sampleGeo != null) {
-                rs = s.executeQuery("SELECT COUNT(*) FROM map_data WHERE name='雨湖区示例地图'"); rs.next();
+            } else if (sampleSvg != null) {
+                rs = s.executeQuery("SELECT COUNT(*) FROM map_data WHERE name='主目录地图'"); rs.next();
                 if (rs.getInt(1) == 0){
-                    try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
-                        ps.setString(1, "雨湖区示例地图");
-                        ps.setString(2, sampleGeo);
-                        ps.setString(3, java.time.Instant.now().toString());
+                    try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,map_type,created_at) VALUES (?,?,?,?)")){
+                        ps.setString(1, "主目录地图");
+                        ps.setString(2, sampleSvg);
+                        ps.setString(3, "svg");
+                        ps.setString(4, java.time.Instant.now().toString());
                         ps.executeUpdate();
                     }
                 }
@@ -1537,35 +1542,54 @@ public class Application {
         if ("GET".equals(method)){
             try (java.sql.Connection c = openConnection()){
                 ensureSampleMapData(c);
-                try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,content,created_at FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
-                    ps.setString(1, "雨湖区示例地图");
+                try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,content,map_type,created_at FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
+                    ps.setString(1, "主目录地图");
                     java.sql.ResultSet rs = ps.executeQuery();
                     if (rs.next()){
                         String content = rs.getString("content");
-                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
+                        String type = rs.getString("map_type");
+                        if (type == null || type.trim().isEmpty()) type = "svg";
+                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"type\":\""+escape(type)+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
+                        writeJson(ex,200,json); return;
+                    }
+                }
+                try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,content,map_type,created_at FROM map_data WHERE map_type='svg' ORDER BY id DESC LIMIT 1")){
+                    java.sql.ResultSet rs = ps.executeQuery();
+                    if (rs.next()){
+                        String content = rs.getString("content");
+                        String type = rs.getString("map_type");
+                        if (type == null || type.trim().isEmpty()) type = "svg";
+                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"type\":\""+escape(type)+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
                         writeJson(ex,200,json); return;
                     }
                 }
                 try (java.sql.Statement s = c.createStatement()){
-                    java.sql.ResultSet rs = s.executeQuery("SELECT id,name,content,created_at FROM map_data ORDER BY id DESC LIMIT 1");
+                    java.sql.ResultSet rs = s.executeQuery("SELECT id,name,content,map_type,created_at FROM map_data ORDER BY id DESC LIMIT 1");
                     if (rs.next()){
                         String content = rs.getString("content");
-                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
+                        String type = rs.getString("map_type");
+                        if (type == null || type.trim().isEmpty()) type = "svg";
+                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"type\":\""+escape(type)+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
                         writeJson(ex,200,json); return;
                     }
                 }
-                writeJson(ex,200,"{\"id\":0,\"name\":\"\",\"content\":\"\"}");
+                writeJson(ex,200,"{\"id\":0,\"name\":\"\",\"type\":\"svg\",\"content\":\"\"}");
                 return;
             } catch(Exception e){ writeText(ex,500,"db error: "+e.getMessage()); return; }
         }
         if ("POST".equals(method)){
             String body = readBody(ex);
-            String name = extractJsonField(body, "name");
-            String content = extractJsonField(body, "content");
-            try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
+            String name = extractJsonString(body, "name");
+            String content = extractJsonString(body, "content");
+            String type = extractJsonString(body, "type");
+            if (type == null || type.trim().isEmpty()) {
+                type = "svg";
+            }
+            try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,map_type,created_at) VALUES (?,?,?,?)")){
                 ps.setString(1, name==null?"地图":name);
                 ps.setString(2, content==null?"{}":content);
-                ps.setString(3, java.time.Instant.now().toString());
+                ps.setString(3, type);
+                ps.setString(4, java.time.Instant.now().toString());
                 ps.executeUpdate();
                 writeJson(ex,200,"{\"ok\":true}"); return;
             } catch(Exception e){ writeText(ex,500,"db error: "+e.getMessage()); return; }
@@ -2021,6 +2045,55 @@ public class Application {
     private static String escape(String s){
         if (s == null) return "";
         return s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n");
+    }
+
+    private static String extractJsonString(String json, String key){
+        if (json == null || key == null) return null;
+        String needle = "\"" + key + "\"";
+        int idx = json.indexOf(needle);
+        if (idx < 0) return null;
+        idx = json.indexOf(':', idx + needle.length());
+        if (idx < 0) return null;
+        idx++;
+        while (idx < json.length() && Character.isWhitespace(json.charAt(idx))) idx++;
+        if (idx >= json.length() || json.charAt(idx) != '"') return null;
+        idx++;
+        StringBuilder sb = new StringBuilder();
+        boolean escaped = false;
+        for (; idx < json.length(); idx++){
+            char ch = json.charAt(idx);
+            if (escaped){
+                switch (ch){
+                    case '"': sb.append('"'); break;
+                    case '\\': sb.append('\\'); break;
+                    case '/': sb.append('/'); break;
+                    case 'b': sb.append('\b'); break;
+                    case 'f': sb.append('\f'); break;
+                    case 'n': sb.append('\n'); break;
+                    case 'r': sb.append('\r'); break;
+                    case 't': sb.append('\t'); break;
+                    case 'u':
+                        if (idx + 4 < json.length()){
+                            String hex = json.substring(idx + 1, idx + 5);
+                            try { sb.append((char) Integer.parseInt(hex, 16)); } catch (Exception ignored) {}
+                            idx += 4;
+                        }
+                        break;
+                    default: sb.append(ch); break;
+                }
+                escaped = false;
+                continue;
+            }
+            if (ch == '\\'){
+                escaped = true;
+                continue;
+            }
+            if (ch == '"'){
+                return sb.toString();
+            }
+            sb.append(ch);
+        }
+        return null;
     }
 
     private static String getQueryParam(HttpExchange ex, String key){

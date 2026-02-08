@@ -1422,7 +1422,7 @@
         const mapScaleText = document.getElementById('map-scale-text');
         const mapHint = document.getElementById('map-hint');
         const mapCanvas = document.querySelector('.map-canvas');
-        const ONLINE_MAP_URL = 'https://geo.datav.aliyun.com/areas_v3/bound/430302.json';
+        const LOCAL_SVG_URL = '../地图.svg';
         const MAP_MIN_SCALE = 0.5;
         const MAP_MAX_SCALE = 20;
         const RESIDENT_VISIBLE_SCALE = 4.0;
@@ -1468,63 +1468,42 @@
             updateMapLayerInfo();
         }
 
-        function renderGeoJson(geo){
+        function renderSvgMap(svgText){
             if(!mapSvg) return;
             mapSvg.innerHTML = '';
             mapLabels = [];
-            if(!geo || geo.type !== 'FeatureCollection'){
+            if(!svgText || typeof svgText !== 'string'){
                 mapSvg.innerHTML = '<text x="20" y="30" fill="#999">未找到地图数据</text>';
                 return;
             }
-            const paths = [];
-            let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-            geo.features.forEach(f=>{
-                const g = f.geometry;
-                const coordsList = g.type === 'Polygon' ? [g.coordinates] : (g.type === 'MultiPolygon' ? g.coordinates : []);
-                coordsList.forEach(poly=>{
-                    poly.forEach(ring=>{
-                        ring.forEach(([x,y])=>{
-                            minX = Math.min(minX,x); minY = Math.min(minY,y);
-                            maxX = Math.max(maxX,x); maxY = Math.max(maxY,y);
-                        });
-                    });
-                });
-            });
-            const width = Math.max(maxX-minX,1);
-            const height = Math.max(maxY-minY,1);
-            const scaleX = 1000/width; const scaleY = 600/height;
-            geo.features.forEach(f=>{
-                const g = f.geometry;
-                const coordsList = g.type === 'Polygon' ? [g.coordinates] : (g.type === 'MultiPolygon' ? g.coordinates : []);
-                coordsList.forEach(poly=>{
-                    poly.forEach(ring=>{
-                        const d = ring.map(([x,y],i)=>{
-                            const px = (x-minX)*scaleX;
-                            const py = 600 - (y-minY)*scaleY;
-                            return `${i===0?'M':'L'}${px},${py}`;
-                        }).join(' ') + ' Z';
-                        paths.push(`<path d="${d}" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>`);
-                    });
-                });
-            });
-            mapSvg.innerHTML = paths.join('');
-
-            const labelFragments = [];
-            geo.features.forEach(f=>{
-                const props = f.properties || {};
-                const name = props.name || '区域';
-                const center = props.center || props.centroid;
-                if (!center || center.length < 2) return;
-                const px = (center[0]-minX)*scaleX;
-                const py = 600 - (center[1]-minY)*scaleY;
-                labelFragments.push(`<text class="map-label" x="${px}" y="${py}" text-anchor="middle">${name}</text>`);
-            });
-            if (labelFragments.length){
-                mapSvg.innerHTML += labelFragments.join('');
-                mapLabels = Array.from(mapSvg.querySelectorAll('.map-label'));
-                const showLabels = mapScale >= 1.2;
-                mapLabels.forEach(el => el.classList.toggle('hidden', !showLabels));
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgText, 'image/svg+xml');
+            const svgEl = doc.documentElement;
+            if (!svgEl || svgEl.nodeName.toLowerCase() !== 'svg'){
+                mapSvg.innerHTML = '<text x="20" y="30" fill="#999">SVG 数据解析失败</text>';
+                return;
             }
+            const viewBox = svgEl.getAttribute('viewBox');
+            const widthAttr = svgEl.getAttribute('width');
+            const heightAttr = svgEl.getAttribute('height');
+            if (viewBox){
+                mapSvg.setAttribute('viewBox', viewBox);
+            } else if (widthAttr && heightAttr) {
+                const w = parseFloat(widthAttr);
+                const h = parseFloat(heightAttr);
+                if (!Number.isNaN(w) && !Number.isNaN(h)){
+                    mapSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                } else {
+                    mapSvg.setAttribute('viewBox', '0 0 1000 600');
+                }
+            } else {
+                mapSvg.setAttribute('viewBox', '0 0 1000 600');
+            }
+            mapSvg.setAttribute('preserveAspectRatio', svgEl.getAttribute('preserveAspectRatio') || 'xMidYMid meet');
+            mapSvg.innerHTML = svgEl.innerHTML;
+            mapLabels = Array.from(mapSvg.querySelectorAll('.map-label'));
+            const showLabels = mapScale >= 1.2;
+            mapLabels.forEach(el => el.classList.toggle('hidden', !showLabels));
         }
 
         function renderResidents(list){
@@ -1681,16 +1660,16 @@
             let mapError = '';
             let residentsError = '';
             try{
-                const dbMapRes = await fetch(API_BASE + '/api/map', {cache:'no-store'}).catch(()=>null);
-                if (dbMapRes && dbMapRes.ok) {
-                    mapData = await dbMapRes.json();
-                }
-                if (!mapData || !mapData.content) {
-                    const onlineRes = await fetch(ONLINE_MAP_URL, {cache:'no-store'}).catch(()=>null);
-                    if (onlineRes && onlineRes.ok) {
-                        mapData = await onlineRes.json();
+                const localSvgRes = await fetch(LOCAL_SVG_URL, {cache:'no-store'}).catch(()=>null);
+                if (localSvgRes && localSvgRes.ok) {
+                    const svgText = await localSvgRes.text();
+                    mapData = { type: 'svg', content: svgText };
+                } else {
+                    const dbMapRes = await fetch(API_BASE + '/api/map', {cache:'no-store'}).catch(()=>null);
+                    if (dbMapRes && dbMapRes.ok) {
+                        mapData = await dbMapRes.json();
                     } else {
-                        mapError = onlineRes ? `在线地图返回 ${onlineRes.status}` : '在线地图请求失败';
+                        mapError = localSvgRes ? `本地地图返回 ${localSvgRes.status}` : '本地地图请求失败';
                     }
                 }
                 try{
@@ -1700,20 +1679,13 @@
                 } catch(e){
                     residentsError = '居民接口请求失败';
                 }
-                let geo = null;
-                if (mapData && mapData.type) {
-                    geo = mapData;
-                } else if (mapData && typeof mapData.content === 'object') {
-                    geo = mapData.content;
-                } else if (mapData && typeof mapData.content === 'string') {
-                    try { geo = JSON.parse(mapData.content || '{}'); } catch(e) { geo = null; }
-                }
-                if (!geo){
+                const contentText = mapData && typeof mapData.content === 'string' ? mapData.content : '';
+                if (!contentText.trim().toLowerCase().startsWith('<svg')){
                     if(mapSvg) mapSvg.innerHTML = '<text x="20" y="30" fill="#999">地图数据解析失败</text>';
-                    if(mapHint) mapHint.textContent = mapError || '地图数据解析失败，请确认后端返回内容';
+                    if(mapHint) mapHint.textContent = mapError || '地图数据解析失败，请确认 SVG 内容';
                     return;
                 }
-                renderGeoJson(geo);
+                renderSvgMap(contentText);
                 renderResidents(residents || []);
                 if(mapHint) {
                     if (mapError || residentsError) {
