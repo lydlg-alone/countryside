@@ -1,0 +1,7 @@
+BASEDIR=C:\Users\lydlg\Desktop\village
+JAVA_EXE=C:\Users\lydlg\Desktop\village\runtime\jre\jdk8u472-b08\bin\java.exe
+JAVA_HOME=C:\Users\lydlg\Desktop\village\runtime\jre\jdk8u472-b08
+MYSQLD_EXE=C:\Users\lydlg\Desktop\village\runtime\mysql\mysql-8.0.36-winx64\bin\mysqld.exe
+MYSQL_HOME=C:\Users\lydlg\Desktop\village\runtime\mysql\mysql-8.0.36-winx64
+MYSQL_BIN=C:\Users\lydlg\Desktop\village\runtime\mysql\mysql-8.0.36-winx64\bin\
+JAR=C:\Users\lydlg\Desktop\village\village-admin-system\target\village-admin-system-0.1.0-SNAPSHOT.jar

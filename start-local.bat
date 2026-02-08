@@ -1,5 +1,6 @@
 @echo off
-setlocal
+chcp 65001 >nul
+setlocal EnableExtensions
 pushd %~dp0
 set BASEDIR=%CD%
 set JAVA_HOME=
@@ -76,12 +77,22 @@ set DB_NAME=village_db
 set DB_USER=village
 set DB_PASS=villagepass
 
-set JAR=%BASEDIR%\village-admin-system\target\village-admin-system-0.1.0-SNAPSHOT-shaded.jar
-if not exist "%JAR%" (
+set "JAR_DIR=%BASEDIR%\village-admin-system\target"
+set "JAR="
+for /f "delims=" %%f in ('dir /b /a-d /o-d "%JAR_DIR%\village-admin-system-*.jar" 2^>nul ^| findstr /v /i "original-"') do (
+  set "JAR=%JAR_DIR%\%%f"
+  goto found_jar
+)
+:found_jar
+if not defined JAR (
   echo [ERROR] 未找到后端 Jar，请先构建：
   echo mvn -f "%BASEDIR%\village-admin-system\pom.xml" package -DskipTests
   exit /b 1
 )
+
+echo [INFO] 停止旧后端...
+for %%d in ("%JAR%") do set "JAR_FILE=%%~nxd"
+powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*%JAR_FILE%*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>nul
 
 > "%START_DEBUG%" (
   echo BASEDIR=%BASEDIR%
@@ -94,12 +105,11 @@ if not exist "%JAR%" (
 )
 
 echo [INFO] 启动后端...
-start "" /B "%JAVA_HOME%\bin\java.exe" -jar "%JAR%" 1> "%APP_OUT%" 2> "%APP_ERR%"
-
+echo [INFO] 后端将前台运行，关闭窗口会停止服务
 echo [INFO] 后端日志：runtime\logs\app.log
-echo [INFO] 错误日志：runtime\logs\app.err
 echo [INFO] 启动信息：runtime\logs\start-debug.txt
-echo [INFO] 后端已启动：http://localhost:8080
+echo [INFO] 后端地址：http://localhost:8080
 echo [INFO] 前端请手动打开：frontend\index.html
+powershell -NoProfile -Command "& '%JAVA_HOME%\bin\java.exe' -jar '%JAR%' 2>&1 | Tee-Object -FilePath '%APP_OUT%'"
 popd
 endlocal

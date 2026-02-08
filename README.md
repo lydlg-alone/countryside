@@ -63,7 +63,6 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 ├─ build-offline.bat                       # 打包离线运行环境
 ├─ start-local.bat                         # 启动后端+MySQL
 ├─ stop-local.bat                          # 停止后端+MySQL
-├─ start-backend.bat                       # 仅启动后端
 ├─ start-frontend.bat                      # 启动前端静态服务
 ├─ 雨湖区.geojson                          # 示例地图数据
 └─ README.md                               # 项目说明
@@ -97,6 +96,9 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 3. 运行项目根目录 `start-local.bat`。
 
 停止服务：运行 `stop-local.bat`。
+
+### 数据库编辑工具（db-editor.html）
+启动后端后，直接打开 `db-editor.html`，root 登录后可浏览所有表并对数据进行新增/编辑/删除（通过后端接口 `/api/ops/db/*`，仅允许本机访问）。默认 root 密码为 `lydlg`（可用环境变量 `DB_EDITOR_ROOT_PASSWORD` 覆盖）。
 
 ## Windows 离线包说明
 

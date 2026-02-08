@@ -24,6 +24,12 @@ public class Application {
     private static final String DB_USER = System.getenv().getOrDefault("DB_USER", "village");
     private static final String DB_PASS = System.getenv().getOrDefault("DB_PASS", "villagepass");
 
+    // local-only DB editor auth (root)
+    private static final String DB_EDITOR_ROOT_PASSWORD = System.getenv().getOrDefault("DB_EDITOR_ROOT_PASSWORD", "lydlg");
+    private static final long DB_EDITOR_TOKEN_TTL_MS = 12L * 60L * 60L * 1000L;
+    private static volatile String dbEditorRootToken = null;
+    private static volatile long dbEditorRootTokenExpMs = 0L;
+
     private static javax.sql.DataSource dataSource = null;
     private static volatile boolean tablesEnsured = false;
 
@@ -79,6 +85,11 @@ public class Application {
         server.createContext("/api/ops/restores", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleOpsRestores(exchange); });
         server.createContext("/api/ops/audit", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleOpsAudit(exchange); });
         server.createContext("/api/ops/audit/report", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleOpsAuditReport(exchange); });
+        // generic DB editor (local only)
+        server.createContext("/api/ops/db/login", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleDbEditorLogin(exchange); });
+        server.createContext("/api/ops/db/tables", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleDbEditorTables(exchange); });
+        server.createContext("/api/ops/db/schema/", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleDbEditorSchema(exchange); });
+        server.createContext("/api/ops/db/rows/", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleDbEditorRows(exchange); });
         server.createContext("/api/gov/tasks", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleGovTasks(exchange); });
         server.createContext("/api/gov/tasks/", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleGovTaskById(exchange); });
         server.createContext("/api/gov/checkins", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleGovCheckins(exchange); });
@@ -211,29 +222,72 @@ public class Application {
         return null;
     }
 
+    private static String loadSvgFromFile(){
+        String[] candidates = new String[]{
+                "1.svg",
+                Paths.get(System.getProperty("user.dir"), "1.svg").toString(),
+                Paths.get(System.getProperty("user.dir"), "..", "1.svg").toString(),
+                Paths.get(System.getProperty("user.dir"), "..", "..", "1.svg").toString()
+        };
+        for (String p : candidates){
+            try {
+                Path path = Paths.get(p).toAbsolutePath().normalize();
+                if (Files.exists(path)){
+                    return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+                }
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
     private static void ensureSampleMapData(java.sql.Connection c){
         try {
             String sampleGeo = loadGeoJsonFromFile();
-            if (sampleGeo == null || sampleGeo.trim().isEmpty()) return;
-            try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
-                ps.setString(1, "雨湖区示例地图");
-                java.sql.ResultSet rs = ps.executeQuery();
-                if (rs.next()){
-                    int id = rs.getInt("id");
-                    try (java.sql.PreparedStatement ups = c.prepareStatement("UPDATE map_data SET content=?, created_at=? WHERE id=?")){
-                        ups.setString(1, sampleGeo);
-                        ups.setString(2, java.time.Instant.now().toString());
-                        ups.setInt(3, id);
-                        ups.executeUpdate();
+            if (sampleGeo != null && !sampleGeo.trim().isEmpty()){
+                try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
+                    ps.setString(1, "雨湖区示例地图");
+                    java.sql.ResultSet rs = ps.executeQuery();
+                    if (rs.next()){
+                        int id = rs.getInt("id");
+                        try (java.sql.PreparedStatement ups = c.prepareStatement("UPDATE map_data SET content=?, created_at=? WHERE id=?")){
+                            ups.setString(1, sampleGeo);
+                            ups.setString(2, java.time.Instant.now().toString());
+                            ups.setInt(3, id);
+                            ups.executeUpdate();
+                        }
+                    } else {
+                        try (java.sql.PreparedStatement ins = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
+                            ins.setString(1, "雨湖区示例地图");
+                            ins.setString(2, sampleGeo);
+                            ins.setString(3, java.time.Instant.now().toString());
+                            ins.executeUpdate();
+                        }
                     }
-                    return;
                 }
             }
-            try (java.sql.PreparedStatement ins = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
-                ins.setString(1, "雨湖区示例地图");
-                ins.setString(2, sampleGeo);
-                ins.setString(3, java.time.Instant.now().toString());
-                ins.executeUpdate();
+
+            String sampleSvg = loadSvgFromFile();
+            if (sampleSvg != null && !sampleSvg.trim().isEmpty()){
+                try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
+                    ps.setString(1, "1.svg");
+                    java.sql.ResultSet rs = ps.executeQuery();
+                    if (rs.next()){
+                        int id = rs.getInt("id");
+                        try (java.sql.PreparedStatement ups = c.prepareStatement("UPDATE map_data SET content=?, created_at=? WHERE id=?")){
+                            ups.setString(1, sampleSvg);
+                            ups.setString(2, java.time.Instant.now().toString());
+                            ups.setInt(3, id);
+                            ups.executeUpdate();
+                        }
+                    } else {
+                        try (java.sql.PreparedStatement ins = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
+                            ins.setString(1, "1.svg");
+                            ins.setString(2, sampleSvg);
+                            ins.setString(3, java.time.Instant.now().toString());
+                            ins.executeUpdate();
+                        }
+                    }
+                }
             }
         } catch (Exception ignored) {
         }
@@ -259,11 +313,13 @@ public class Application {
             rs = s.executeQuery("SELECT COUNT(*) FROM map_data"); rs.next();
             int mapCount = rs.getInt(1);
             String sampleGeo = loadGeoJsonFromFile();
+            String sampleSvg = loadSvgFromFile();
             if (mapCount == 0){
-                String geo = sampleGeo != null ? sampleGeo : "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"name\":\"村域\"},\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[1000,0],[1000,600],[0,600],[0,0]]]}}]}";
+                String content = sampleSvg != null ? sampleSvg : (sampleGeo != null ? sampleGeo : "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"name\":\"村域\"},\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[1000,0],[1000,600],[0,600],[0,0]]]}}]}");
                 try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
-                    ps.setString(1, sampleGeo != null ? "雨湖区示例地图" : "默认村落地图");
-                    ps.setString(2, geo);
+                    if (sampleSvg != null) ps.setString(1, "1.svg");
+                    else ps.setString(1, sampleGeo != null ? "雨湖区示例地图" : "默认村落地图");
+                    ps.setString(2, content);
                     ps.setString(3, java.time.Instant.now().toString());
                     ps.executeUpdate();
                 }
@@ -273,6 +329,17 @@ public class Application {
                     try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
                         ps.setString(1, "雨湖区示例地图");
                         ps.setString(2, sampleGeo);
+                        ps.setString(3, java.time.Instant.now().toString());
+                        ps.executeUpdate();
+                    }
+                }
+            }
+            if (sampleSvg != null) {
+                rs = s.executeQuery("SELECT COUNT(*) FROM map_data WHERE name='1.svg'"); rs.next();
+                if (rs.getInt(1) == 0){
+                    try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
+                        ps.setString(1, "1.svg");
+                        ps.setString(2, sampleSvg);
                         ps.setString(3, java.time.Instant.now().toString());
                         ps.executeUpdate();
                     }
@@ -393,12 +460,25 @@ public class Application {
         try { id = Integer.parseInt(idStr); } catch(Exception e){ writeText(ex,400,"invalid id"); return; }
         Map<String,Object> found = null;
         try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,role,username,password FROM users WHERE id=?")){
-            ps.setInt(1,id); java.sql.ResultSet rs = ps.executeQuery(); if (rs.next()){ found = new HashMap<>(); found.put("id", rs.getInt("id")); found.put("name", rs.getString("name")); found.put("role", rs.getString("role")); }
+            ps.setInt(1,id);
+            java.sql.ResultSet rs = ps.executeQuery();
+            if (rs.next()){
+                found = new HashMap<>();
+                found.put("id", rs.getInt("id"));
+                found.put("name", rs.getString("name"));
+                found.put("role", rs.getString("role"));
+                found.put("username", rs.getString("username"));
+                found.put("password", rs.getString("password"));
+            }
         } catch(Exception exx){ writeText(ex,500,"db error: "+exx.getMessage()); return; }
         String method = ex.getRequestMethod();
         if ("GET".equals(method)){
             if (found==null) { writeText(ex,404,"not found"); return; }
-            String json = "{\"id\":"+found.get("id")+",\"name\":\""+escape(found.get("name").toString())+"\",\"role\":\""+escape(found.get("role").toString())+"\"}";
+            String name = found.get("name")==null?"":String.valueOf(found.get("name"));
+            String role = found.get("role")==null?"":String.valueOf(found.get("role"));
+            String username = found.get("username")==null?"":String.valueOf(found.get("username"));
+            String password = found.get("password")==null?"":String.valueOf(found.get("password"));
+            String json = "{\"id\":"+found.get("id")+",\"name\":\""+escape(name)+"\",\"role\":\""+escape(role)+"\",\"username\":\""+escape(username)+"\",\"password\":\""+escape(password)+"\"}";
             writeJson(ex,200,json); return;
         }
         if ("PUT".equals(method)){
@@ -406,10 +486,18 @@ public class Application {
             String body = readBody(ex);
             String name = extractJsonField(body, "name");
             String role = extractJsonField(body, "role");
-            try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("UPDATE users SET name=?,role=? WHERE id=?")){
-                ps.setString(1, name==null?found.get("name").toString():name);
-                ps.setString(2, role==null?found.get("role").toString():role);
-                ps.setInt(3, id);
+            String username = extractJsonField(body, "username");
+            String password = extractJsonField(body, "password");
+            String oldName = found.get("name")==null?"":String.valueOf(found.get("name"));
+            String oldRole = found.get("role")==null?"":String.valueOf(found.get("role"));
+            String oldUsername = found.get("username")==null?null:String.valueOf(found.get("username"));
+            String oldPassword = found.get("password")==null?null:String.valueOf(found.get("password"));
+            try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("UPDATE users SET name=?,role=?,username=?,password=? WHERE id=?")){
+                ps.setString(1, name==null?oldName:name);
+                ps.setString(2, role==null?oldRole:role);
+                ps.setString(3, username==null?oldUsername:username);
+                ps.setString(4, password==null?oldPassword:password);
+                ps.setInt(5, id);
                 ps.executeUpdate();
                 writeJson(ex,200,"{\"ok\":true}"); return;
             } catch(Exception exx){ writeText(ex,500,"db error: "+exx.getMessage()); return; }
@@ -1537,15 +1625,6 @@ public class Application {
         if ("GET".equals(method)){
             try (java.sql.Connection c = openConnection()){
                 ensureSampleMapData(c);
-                try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,content,created_at FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
-                    ps.setString(1, "雨湖区示例地图");
-                    java.sql.ResultSet rs = ps.executeQuery();
-                    if (rs.next()){
-                        String content = rs.getString("content");
-                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
-                        writeJson(ex,200,json); return;
-                    }
-                }
                 try (java.sql.Statement s = c.createStatement()){
                     java.sql.ResultSet rs = s.executeQuery("SELECT id,name,content,created_at FROM map_data ORDER BY id DESC LIMIT 1");
                     if (rs.next()){
@@ -1559,9 +1638,9 @@ public class Application {
             } catch(Exception e){ writeText(ex,500,"db error: "+e.getMessage()); return; }
         }
         if ("POST".equals(method)){
-            String body = readBody(ex);
-            String name = extractJsonField(body, "name");
-            String content = extractJsonField(body, "content");
+            java.util.Map<String, String> payload = parseJsonObjectToStrings(readBody(ex));
+            String name = payload.get("name");
+            String content = payload.get("content");
             try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
                 ps.setString(1, name==null?"地图":name);
                 ps.setString(2, content==null?"{}":content);
@@ -2005,6 +2084,464 @@ public class Application {
         writeText(ex,405,"Method Not Allowed");
     }
 
+    private static void handleDbEditorLogin(HttpExchange ex) throws IOException {
+        ensureTablesSafe();
+        if (!requireLoopback(ex)) return;
+        String method = ex.getRequestMethod();
+        if (!"POST".equalsIgnoreCase(method)) { writeText(ex,405,"Method Not Allowed"); return; }
+        try {
+            java.util.Map<String, String> payload = parseJsonObjectToStrings(readBody(ex));
+            String password = payload.get("password");
+            if (password == null) password = payload.get("rootPassword");
+            if (password == null || !password.equals(DB_EDITOR_ROOT_PASSWORD)) {
+                writeJson(ex,401,"{\"error\":\"invalid password\"}");
+                return;
+            }
+            String token = java.util.UUID.randomUUID().toString().replace("-", "");
+            long exp = System.currentTimeMillis() + DB_EDITOR_TOKEN_TTL_MS;
+            dbEditorRootToken = token;
+            dbEditorRootTokenExpMs = exp;
+            writeJson(ex,200,"{\"token\":\""+escape(token)+"\",\"expires_at\":"+exp+"}");
+        } catch (Exception e) {
+            writeText(ex,500,"error: "+e.getMessage());
+        }
+    }
+
+    private static void handleDbEditorTables(HttpExchange ex) throws IOException {
+        ensureTablesSafe();
+        if (!requireDbEditorAuth(ex)) return;
+        String method = ex.getRequestMethod();
+        if (!"GET".equalsIgnoreCase(method)) { writeText(ex,405,"Method Not Allowed"); return; }
+        try (java.sql.Connection c = openConnection()) {
+            java.sql.DatabaseMetaData md = c.getMetaData();
+            java.sql.ResultSet rs = md.getTables(c.getCatalog(), null, "%", new String[]{"TABLE"});
+            java.util.List<String> tables = new java.util.ArrayList<>();
+            while (rs.next()) {
+                String name = rs.getString("TABLE_NAME");
+                if (name != null && !name.trim().isEmpty()) tables.add(name);
+            }
+            tables.sort(String.CASE_INSENSITIVE_ORDER);
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"db\":\"").append(escape(DB_NAME)).append("\",\"tables\":[");
+            for (int i = 0; i < tables.size(); i++) {
+                if (i > 0) sb.append(',');
+                sb.append('"').append(escape(tables.get(i))).append('"');
+            }
+            sb.append("]}");
+            writeJson(ex,200,sb.toString());
+        } catch (Exception e) {
+            writeText(ex,500,"db error: "+e.getMessage());
+        }
+    }
+
+    private static void handleDbEditorSchema(HttpExchange ex) throws IOException {
+        ensureTablesSafe();
+        if (!requireDbEditorAuth(ex)) return;
+        String method = ex.getRequestMethod();
+        if (!"GET".equalsIgnoreCase(method)) { writeText(ex,405,"Method Not Allowed"); return; }
+        String path = ex.getRequestURI().getPath(); // /api/ops/db/schema/{table}
+        String table = path.replaceFirst(".*/api/ops/db/schema/", "");
+        if (table == null) table = "";
+        if (table.contains("/")) table = table.substring(0, table.indexOf('/'));
+        if (!isSafeIdentifier(table)) { writeJson(ex,400,"{\"error\":\"invalid table\"}"); return; }
+
+        try (java.sql.Connection c = openConnection()) {
+            java.sql.DatabaseMetaData md = c.getMetaData();
+            java.util.List<String> pk = getPrimaryKeys(md, c.getCatalog(), table);
+
+            java.sql.ResultSet cols = md.getColumns(c.getCatalog(), null, table, "%");
+            java.util.List<java.util.Map<String,String>> colList = new java.util.ArrayList<>();
+            while (cols.next()) {
+                java.util.Map<String,String> col = new java.util.HashMap<>();
+                col.put("name", cols.getString("COLUMN_NAME"));
+                col.put("type", cols.getString("TYPE_NAME"));
+                col.put("nullable", String.valueOf(cols.getInt("NULLABLE")));
+                col.put("default", cols.getString("COLUMN_DEF"));
+                col.put("auto", cols.getString("IS_AUTOINCREMENT"));
+                colList.add(col);
+            }
+            if (colList.isEmpty()) { writeJson(ex,404,"{\"error\":\"table not found\"}"); return; }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"table\":\"").append(escape(table)).append("\",\"primaryKey\":").append(toJsonStringArray(pk)).append(",\"columns\":[");
+            boolean first = true;
+            for (java.util.Map<String,String> col : colList) {
+                if (!first) sb.append(','); first = false;
+                sb.append('{')
+                  .append("\"name\":\"").append(escape(col.get("name"))).append("\",")
+                  .append("\"type\":\"").append(escape(col.get("type"))).append("\",")
+                  .append("\"nullable\":").append(col.get("nullable")==null?"1":col.get("nullable")).append(',')
+                  .append("\"auto\":\"").append(escape(col.get("auto"))).append("\",");
+                if (col.get("default") == null) sb.append("\"default\":null");
+                else sb.append("\"default\":\"").append(escape(col.get("default"))).append('"');
+                sb.append('}');
+            }
+            sb.append("]}");
+            writeJson(ex,200,sb.toString());
+        } catch (Exception e) {
+            writeText(ex,500,"db error: "+e.getMessage());
+        }
+    }
+
+    private static void handleDbEditorRows(HttpExchange ex) throws IOException {
+        ensureTablesSafe();
+        if (!requireDbEditorAuth(ex)) return;
+        String method = ex.getRequestMethod();
+        String path = ex.getRequestURI().getPath(); // /api/ops/db/rows/{table}[/pk]
+        String rest = path.replaceFirst(".*/api/ops/db/rows/", "");
+        if (rest == null) rest = "";
+        String[] parts = rest.split("/");
+        String table = parts.length > 0 ? parts[0] : "";
+        String pkValue = parts.length > 1 ? parts[1] : null;
+        if (!isSafeIdentifier(table)) { writeJson(ex,400,"{\"error\":\"invalid table\"}"); return; }
+
+        try (java.sql.Connection c = openConnection()) {
+            java.sql.DatabaseMetaData md = c.getMetaData();
+            java.util.List<String> pkCols = getPrimaryKeys(md, c.getCatalog(), table);
+            java.util.List<String> columns = getColumns(md, c.getCatalog(), table);
+            if (columns.isEmpty()) { writeJson(ex,404,"{\"error\":\"table not found\"}"); return; }
+
+            if ("GET".equalsIgnoreCase(method) && pkValue == null) {
+                int limit = clampInt(getQueryParam(ex, "limit"), 200, 1, 1000);
+                int offset = clampInt(getQueryParam(ex, "offset"), 0, 0, 1_000_000);
+                String orderCol = (pkCols.size() == 1) ? pkCols.get(0) : columns.get(0);
+
+                long total = 0;
+                try (java.sql.Statement s = c.createStatement()) {
+                    java.sql.ResultSet rsc = s.executeQuery("SELECT COUNT(*) FROM " + quoteIdent(table));
+                    if (rsc.next()) total = rsc.getLong(1);
+                }
+
+                String sql = "SELECT * FROM " + quoteIdent(table) + " ORDER BY " + quoteIdent(orderCol) + " DESC LIMIT ? OFFSET ?";
+                try (java.sql.PreparedStatement ps = c.prepareStatement(sql)) {
+                    ps.setInt(1, limit);
+                    ps.setInt(2, offset);
+                    java.sql.ResultSet rs = ps.executeQuery();
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("{\"table\":\"").append(escape(table)).append("\",\"primaryKey\":").append(toJsonStringArray(pkCols))
+                      .append(",\"columns\":").append(toJsonStringArray(columns))
+                      .append(",\"limit\":").append(limit).append(",\"offset\":").append(offset).append(",\"total\":").append(total)
+                      .append(",\"rows\":[");
+                    boolean firstRow = true;
+                    while (rs.next()) {
+                        if (!firstRow) sb.append(','); firstRow = false;
+                        sb.append('{');
+                        for (int i = 0; i < columns.size(); i++) {
+                            if (i > 0) sb.append(',');
+                            String col = columns.get(i);
+                            Object v = rs.getObject(col);
+                            sb.append('"').append(escape(col)).append("\":");
+                            if (v == null) sb.append("null");
+                            else sb.append('"').append(escape(String.valueOf(v))).append('"');
+                        }
+                        sb.append('}');
+                    }
+                    sb.append("]}");
+                    writeJson(ex,200,sb.toString());
+                    return;
+                }
+            }
+
+            if ("GET".equalsIgnoreCase(method) && pkValue != null) {
+                if (pkCols.size() != 1) { writeJson(ex,400,"{\"error\":\"composite primary key not supported\"}"); return; }
+                String pkCol = pkCols.get(0);
+                String sql = "SELECT * FROM " + quoteIdent(table) + " WHERE " + quoteIdent(pkCol) + "=? LIMIT 1";
+                try (java.sql.PreparedStatement ps = c.prepareStatement(sql)) {
+                    ps.setString(1, pkValue);
+                    java.sql.ResultSet rs = ps.executeQuery();
+                    if (!rs.next()) { writeJson(ex,404,"{\"error\":\"row not found\"}"); return; }
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("{\"table\":\"").append(escape(table)).append("\",\"row\":{");
+                    for (int i = 0; i < columns.size(); i++) {
+                        if (i > 0) sb.append(',');
+                        String col = columns.get(i);
+                        Object v = rs.getObject(col);
+                        sb.append('"').append(escape(col)).append("\":");
+                        if (v == null) sb.append("null");
+                        else sb.append('"').append(escape(String.valueOf(v))).append('"');
+                    }
+                    sb.append("}}");
+                    writeJson(ex,200,sb.toString());
+                    return;
+                }
+            }
+
+            if ("POST".equalsIgnoreCase(method) && pkValue == null) {
+                java.util.Map<String, String> row = parseJsonObjectToStrings(readBody(ex));
+                if (row.isEmpty()) { writeJson(ex,400,"{\"error\":\"empty body\"}"); return; }
+                java.util.Map<String, String> allowed = filterAllowedColumns(row, columns);
+                if (allowed.isEmpty()) { writeJson(ex,400,"{\"error\":\"no valid columns\"}"); return; }
+
+                StringBuilder sql = new StringBuilder();
+                sql.append("INSERT INTO ").append(quoteIdent(table)).append(" (");
+                java.util.List<String> cols = new java.util.ArrayList<>(allowed.keySet());
+                cols.sort(String.CASE_INSENSITIVE_ORDER);
+                for (int i = 0; i < cols.size(); i++) {
+                    if (i > 0) sql.append(',');
+                    sql.append(quoteIdent(cols.get(i)));
+                }
+                sql.append(") VALUES (");
+                for (int i = 0; i < cols.size(); i++) {
+                    if (i > 0) sql.append(',');
+                    sql.append('?');
+                }
+                sql.append(')');
+
+                try (java.sql.PreparedStatement ps = c.prepareStatement(sql.toString(), java.sql.Statement.RETURN_GENERATED_KEYS)) {
+                    for (int i = 0; i < cols.size(); i++) {
+                        String v = allowed.get(cols.get(i));
+                        ps.setObject(i + 1, v);
+                    }
+                    ps.executeUpdate();
+                    Object newId = null;
+                    java.sql.ResultSet g = ps.getGeneratedKeys();
+                    if (g != null && g.next()) newId = g.getObject(1);
+                    if (newId == null) writeJson(ex,201,"{\"ok\":true}");
+                    else writeJson(ex,201,"{\"ok\":true,\"id\":\""+escape(String.valueOf(newId))+"\"}");
+                    return;
+                }
+            }
+
+            if ("PUT".equalsIgnoreCase(method) && pkValue != null) {
+                if (pkCols.size() != 1) { writeJson(ex,400,"{\"error\":\"composite primary key not supported\"}"); return; }
+                String pkCol = pkCols.get(0);
+                java.util.Map<String, String> row = parseJsonObjectToStrings(readBody(ex));
+                row.remove(pkCol);
+                java.util.Map<String, String> allowed = filterAllowedColumns(row, columns);
+                if (allowed.isEmpty()) { writeJson(ex,400,"{\"error\":\"no valid columns\"}"); return; }
+
+                java.util.List<String> cols = new java.util.ArrayList<>(allowed.keySet());
+                cols.sort(String.CASE_INSENSITIVE_ORDER);
+                StringBuilder sql = new StringBuilder();
+                sql.append("UPDATE ").append(quoteIdent(table)).append(" SET ");
+                for (int i = 0; i < cols.size(); i++) {
+                    if (i > 0) sql.append(',');
+                    sql.append(quoteIdent(cols.get(i))).append("=?");
+                }
+                sql.append(" WHERE ").append(quoteIdent(pkCol)).append("=?");
+
+                try (java.sql.PreparedStatement ps = c.prepareStatement(sql.toString())) {
+                    for (int i = 0; i < cols.size(); i++) {
+                        String v = allowed.get(cols.get(i));
+                        ps.setObject(i + 1, v);
+                    }
+                    ps.setString(cols.size() + 1, pkValue);
+                    int updated = ps.executeUpdate();
+                    writeJson(ex,200,"{\"ok\":true,\"updated\":"+updated+"}");
+                    return;
+                }
+            }
+
+            if ("DELETE".equalsIgnoreCase(method) && pkValue != null) {
+                if (pkCols.size() != 1) { writeJson(ex,400,"{\"error\":\"composite primary key not supported\"}"); return; }
+                String pkCol = pkCols.get(0);
+                String sql = "DELETE FROM " + quoteIdent(table) + " WHERE " + quoteIdent(pkCol) + "=?";
+                try (java.sql.PreparedStatement ps = c.prepareStatement(sql)) {
+                    ps.setString(1, pkValue);
+                    int deleted = ps.executeUpdate();
+                    writeJson(ex,200,"{\"ok\":true,\"deleted\":"+deleted+"}");
+                    return;
+                }
+            }
+
+            writeText(ex,405,"Method Not Allowed");
+        } catch (Exception e) {
+            writeText(ex,500,"db error: "+e.getMessage());
+        }
+    }
+
+    private static boolean requireLoopback(HttpExchange ex) throws IOException {
+        try {
+            java.net.InetSocketAddress remote = ex.getRemoteAddress();
+            if (remote == null) { writeJson(ex,403,"{\"error\":\"forbidden\"}"); return false; }
+            java.net.InetAddress addr = remote.getAddress();
+            if (addr != null && (addr.isLoopbackAddress() || addr.isAnyLocalAddress())) return true;
+        } catch (Exception ignored) {}
+        writeJson(ex,403,"{\"error\":\"forbidden\"}");
+        return false;
+    }
+
+    private static boolean requireDbEditorAuth(HttpExchange ex) throws IOException {
+        if (!requireLoopback(ex)) return false;
+        String auth = ex.getRequestHeaders().getFirst("Authorization");
+        if (auth == null) { writeJson(ex,401,"{\"error\":\"missing token\"}"); return false; }
+        auth = auth.trim();
+        String token = auth.startsWith("Bearer ") ? auth.substring("Bearer ".length()).trim() : auth;
+        if (token.isEmpty()) { writeJson(ex,401,"{\"error\":\"missing token\"}"); return false; }
+        String expected = dbEditorRootToken;
+        long exp = dbEditorRootTokenExpMs;
+        if (expected == null || System.currentTimeMillis() > exp || !expected.equals(token)) {
+            writeJson(ex,401,"{\"error\":\"invalid token\"}");
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean isSafeIdentifier(String s) {
+        if (s == null || s.isEmpty()) return false;
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            boolean ok = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_';
+            if (!ok) return false;
+        }
+        return true;
+    }
+
+    private static String quoteIdent(String ident) {
+        return "`" + ident + "`";
+    }
+
+    private static int clampInt(String s, int def, int min, int max) {
+        int v = def;
+        try { if (s != null) v = Integer.parseInt(s); } catch (Exception ignored) {}
+        if (v < min) v = min;
+        if (v > max) v = max;
+        return v;
+    }
+
+    private static java.util.List<String> getPrimaryKeys(java.sql.DatabaseMetaData md, String catalog, String table) throws Exception {
+        java.util.List<String> pk = new java.util.ArrayList<>();
+        java.sql.ResultSet rs = md.getPrimaryKeys(catalog, null, table);
+        java.util.Map<Integer, String> ordered = new java.util.HashMap<>();
+        while (rs.next()) {
+            String col = rs.getString("COLUMN_NAME");
+            int seq = 0;
+            try { seq = rs.getInt("KEY_SEQ"); } catch (Exception ignored) {}
+            if (col != null) ordered.put(seq, col);
+        }
+        if (!ordered.isEmpty()) {
+            java.util.List<Integer> keys = new java.util.ArrayList<>(ordered.keySet());
+            keys.sort(Integer::compareTo);
+            for (Integer k : keys) pk.add(ordered.get(k));
+        }
+        return pk;
+    }
+
+    private static java.util.List<String> getColumns(java.sql.DatabaseMetaData md, String catalog, String table) throws Exception {
+        java.util.List<String> cols = new java.util.ArrayList<>();
+        java.sql.ResultSet rs = md.getColumns(catalog, null, table, "%");
+        while (rs.next()) {
+            String col = rs.getString("COLUMN_NAME");
+            if (col != null) cols.add(col);
+        }
+        return cols;
+    }
+
+    private static String toJsonStringArray(java.util.List<String> items) {
+        StringBuilder sb = new StringBuilder();
+        sb.append('[');
+        for (int i = 0; i < items.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append('"').append(escape(items.get(i))).append('"');
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
+    private static java.util.Map<String, String> parseJsonObjectToStrings(String json) {
+        java.util.Map<String, String> out = new java.util.HashMap<>();
+        if (json == null) return out;
+        int[] idx = new int[]{0};
+        skipWs(json, idx);
+        if (idx[0] >= json.length() || json.charAt(idx[0]) != '{') return out;
+        idx[0]++;
+        while (true) {
+            skipWs(json, idx);
+            if (idx[0] >= json.length()) break;
+            if (json.charAt(idx[0]) == '}') { idx[0]++; break; }
+            String key = parseJsonString(json, idx);
+            if (key == null) break;
+            skipWs(json, idx);
+            if (idx[0] >= json.length() || json.charAt(idx[0]) != ':') break;
+            idx[0]++;
+            skipWs(json, idx);
+            String value = parseJsonValueAsString(json, idx);
+            out.put(key, value);
+            skipWs(json, idx);
+            if (idx[0] < json.length() && json.charAt(idx[0]) == ',') { idx[0]++; continue; }
+            if (idx[0] < json.length() && json.charAt(idx[0]) == '}') { idx[0]++; break; }
+        }
+        return out;
+    }
+
+    private static void skipWs(String s, int[] idx) {
+        while (idx[0] < s.length()) {
+            char c = s.charAt(idx[0]);
+            if (c == ' ' || c == '\n' || c == '\r' || c == '\t') idx[0]++;
+            else break;
+        }
+    }
+
+    private static String parseJsonString(String s, int[] idx) {
+        if (idx[0] >= s.length() || s.charAt(idx[0]) != '"') return null;
+        idx[0]++;
+        StringBuilder sb = new StringBuilder();
+        while (idx[0] < s.length()) {
+            char c = s.charAt(idx[0]++);
+            if (c == '"') return sb.toString();
+            if (c == '\\' && idx[0] < s.length()) {
+                char e = s.charAt(idx[0]++);
+                switch (e) {
+                    case '"': sb.append('"'); break;
+                    case '\\': sb.append('\\'); break;
+                    case '/': sb.append('/'); break;
+                    case 'b': sb.append('\b'); break;
+                    case 'f': sb.append('\f'); break;
+                    case 'n': sb.append('\n'); break;
+                    case 'r': sb.append('\r'); break;
+                    case 't': sb.append('\t'); break;
+                    case 'u':
+                        if (idx[0] + 4 <= s.length()) {
+                            String hex = s.substring(idx[0], idx[0] + 4);
+                            try { sb.append((char) Integer.parseInt(hex, 16)); } catch (Exception ignored) {}
+                            idx[0] += 4;
+                        }
+                        break;
+                    default: sb.append(e);
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+        return null;
+    }
+
+    private static String parseJsonValueAsString(String s, int[] idx) {
+        if (idx[0] >= s.length()) return null;
+        char c = s.charAt(idx[0]);
+        if (c == '"') return parseJsonString(s, idx);
+        if (c == 'n' && s.startsWith("null", idx[0])) { idx[0] += 4; return null; }
+        if (c == 't' && s.startsWith("true", idx[0])) { idx[0] += 4; return "true"; }
+        if (c == 'f' && s.startsWith("false", idx[0])) { idx[0] += 5; return "false"; }
+        int start = idx[0];
+        while (idx[0] < s.length()) {
+            char ch = s.charAt(idx[0]);
+            if ((ch >= '0' && ch <= '9') || ch == '-' || ch == '.' || ch == 'e' || ch == 'E' || ch == '+') idx[0]++;
+            else break;
+        }
+        if (idx[0] > start) return s.substring(start, idx[0]);
+        // unsupported type (object/array) -> return raw token until delimiter
+        while (idx[0] < s.length()) {
+            char ch = s.charAt(idx[0]);
+            if (ch == ',' || ch == '}' || ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') break;
+            idx[0]++;
+        }
+        return s.substring(start, idx[0]);
+    }
+
+    private static java.util.Map<String, String> filterAllowedColumns(java.util.Map<String, String> row, java.util.List<String> columns) {
+        java.util.Set<String> allowed = new java.util.HashSet<>(columns);
+        java.util.Map<String, String> out = new java.util.HashMap<>();
+        for (java.util.Map.Entry<String, String> e : row.entrySet()) {
+            String k = e.getKey();
+            if (k == null) continue;
+            if (!isSafeIdentifier(k)) continue;
+            if (!allowed.contains(k)) continue;
+            out.put(k, e.getValue());
+        }
+        return out;
+    }
+
     // very small helpers - not robust JSON parsing but enough for mock
     private static String extractJsonField(String json, String key){
         if (json==null) return null;
@@ -2020,7 +2557,7 @@ public class Application {
 
     private static String escape(String s){
         if (s == null) return "";
-        return s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n");
+        return s.replace("\\","\\\\").replace("\"","\\\"").replace("\r","\\r").replace("\n","\\n").replace("\t","\\t");
     }
 
     private static String getQueryParam(HttpExchange ex, String key){

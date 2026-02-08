@@ -459,6 +459,8 @@
         .login-box .form-group{margin-bottom:12px;}
         .login-box label{display:block;margin-bottom:6px;font-weight:600;color:#4a5568;}
         .login-box input{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;}
+        .login-box .captcha-row{display:flex;gap:8px;align-items:center;}
+        .login-box #captcha-canvas{width:120px;height:38px;border:1px solid #ddd;border-radius:4px;cursor:pointer;user-select:none;}
     </style>
 </head>
 <body>
@@ -473,6 +475,13 @@
                 <div class="form-group">
                     <label>密码</label>
                     <input name="password" type="password" placeholder="123456" required>
+                </div>
+                <div class="form-group">
+                    <label>验证码</label>
+                    <div class="captcha-row">
+                        <input name="captcha" type="text" placeholder="输入图形数字" required>
+                        <canvas id="captcha-canvas" width="120" height="38" title="点击刷新验证码"></canvas>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">登录</button>
@@ -568,14 +577,17 @@
                     <div class="module-header">首页看板</div>
                     <div class="module-description">村落地图与村民信息展示</div>
                     <div class="map-card">
-                        <div class="map-toolbar">
-                            <button class="btn btn-primary" id="map-load">从数据库导入</button>
-                            <button class="btn btn-secondary" id="map-add-resident">添加村民信息</button>
-                            <button class="btn btn-secondary" id="map-zoom-in">放大</button>
-                            <button class="btn btn-secondary" id="map-zoom-out">缩小</button>
-                            <button class="btn btn-secondary" id="map-reset">重置</button>
-                            <span class="muted" id="map-scale-text">缩放：100%</span>
-                        </div>
+                    <div class="map-toolbar">
+                        <button class="btn btn-primary" id="map-load">从数据库导入</button>
+                        <button class="btn btn-secondary" id="map-import-file">导入文件</button>
+                        <button class="btn btn-secondary" id="map-import-1svg">导入 1.svg</button>
+                        <input id="map-file-input" type="file" accept=".geojson,.json,.svg" style="display:none;">
+                        <button class="btn btn-secondary" id="map-add-resident">添加村民信息</button>
+                        <button class="btn btn-secondary" id="map-zoom-in">放大</button>
+                        <button class="btn btn-secondary" id="map-zoom-out">缩小</button>
+                        <button class="btn btn-secondary" id="map-reset">重置</button>
+                        <span class="muted" id="map-scale-text">缩放：100%</span>
+                    </div>
                         <div class="map-canvas">
                             <div class="map-inner" id="map-inner">
                                 <svg id="map-svg" class="map-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet"></svg>
@@ -1470,6 +1482,8 @@
 
         function renderGeoJson(geo){
             if(!mapSvg) return;
+            mapSvg.setAttribute('viewBox', '0 0 1000 600');
+            mapSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
             mapSvg.innerHTML = '';
             mapLabels = [];
             if(!geo || geo.type !== 'FeatureCollection'){
@@ -1524,6 +1538,36 @@
                 mapLabels = Array.from(mapSvg.querySelectorAll('.map-label'));
                 const showLabels = mapScale >= 1.2;
                 mapLabels.forEach(el => el.classList.toggle('hidden', !showLabels));
+            }
+        }
+
+        function renderSvgText(svgText){
+            if(!mapSvg) return;
+            mapSvg.innerHTML = '';
+            mapLabels = [];
+            const text = (svgText || '').trim();
+            if(!text){
+                mapSvg.innerHTML = '<text x="20" y="30" fill="#999">未找到地图数据</text>';
+                return;
+            }
+            try{
+                const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+                const svgEl = doc.documentElement;
+                if(!svgEl || svgEl.nodeName.toLowerCase() !== 'svg'){
+                    throw new Error('SVG 解析失败');
+                }
+                const viewBox = svgEl.getAttribute('viewBox');
+                if(viewBox){
+                    mapSvg.setAttribute('viewBox', viewBox);
+                }else{
+                    const w = Number(String(svgEl.getAttribute('width')||'').replace(/[^\d.]/g,'')) || 1000;
+                    const h = Number(String(svgEl.getAttribute('height')||'').replace(/[^\d.]/g,'')) || 600;
+                    mapSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                }
+                mapSvg.setAttribute('preserveAspectRatio', svgEl.getAttribute('preserveAspectRatio') || 'xMidYMid meet');
+                mapSvg.innerHTML = svgEl.innerHTML || '';
+            }catch(err){
+                mapSvg.innerHTML = '<text x="20" y="30" fill="#999">SVG 地图解析失败</text>';
             }
         }
 
@@ -1706,7 +1750,20 @@
                 } else if (mapData && typeof mapData.content === 'object') {
                     geo = mapData.content;
                 } else if (mapData && typeof mapData.content === 'string') {
-                    try { geo = JSON.parse(mapData.content || '{}'); } catch(e) { geo = null; }
+                    const contentText = (mapData.content || '').trim();
+                    if (/<svg[\s>]/i.test(contentText)) {
+                        renderSvgText(contentText);
+                        renderResidents(residents || []);
+                        if(mapHint) {
+                            if (mapError || residentsError) {
+                                mapHint.textContent = [mapError, residentsError].filter(Boolean).join('；');
+                            } else {
+                                mapHint.textContent = '已加载 SVG 地图（可缩放/拖动）';
+                            }
+                        }
+                        return;
+                    }
+                    try { geo = JSON.parse(contentText || '{}'); } catch(e) { geo = null; }
                 }
                 if (!geo){
                     if(mapSvg) mapSvg.innerHTML = '<text x="20" y="30" fill="#999">地图数据解析失败</text>';
@@ -1728,7 +1785,61 @@
             }
         }
 
+        async function importMapToDb(name, content){
+            const payload = { name: name || '地图', content: content || '' };
+            const r = await fetch(API_BASE + '/api/map', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+            if(!r.ok){
+                const msg = await r.text().catch(()=>'');
+                throw new Error(msg || `导入失败（${r.status}）`);
+            }
+        }
+
+        async function importLocalFile(file){
+            const name = file?.name || '地图文件';
+            const text = await file.text();
+            await importMapToDb(name, text);
+            await loadMapData();
+            if(mapHint) mapHint.textContent = `已导入并加载：${name}`;
+        }
+
+        async function importRootSvg(){
+            const candidates = ['../1.svg', '/1.svg', './1.svg'];
+            let lastErr = null;
+            for(const url of candidates){
+                try{
+                    const res = await fetch(url, {cache:'no-store'});
+                    if(!res.ok) throw new Error(String(res.status));
+                    const text = await res.text();
+                    await importMapToDb('1.svg', text);
+                    await loadMapData();
+                    if(mapHint) mapHint.textContent = '已导入并加载：1.svg';
+                    return;
+                }catch(e){
+                    lastErr = e;
+                }
+            }
+            throw new Error('无法读取主目录 1.svg（请使用 start-frontend.bat 启动静态服务后再试）');
+        }
+
         document.getElementById('map-load')?.addEventListener('click', loadMapData);
+        document.getElementById('map-import-file')?.addEventListener('click', ()=> document.getElementById('map-file-input')?.click());
+        document.getElementById('map-file-input')?.addEventListener('change', async (e)=>{
+            const f = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if(!f) return;
+            try{
+                await importLocalFile(f);
+            }catch(err){
+                alert('导入失败：' + (err && err.message ? err.message : '未知错误'));
+            }
+        });
+        document.getElementById('map-import-1svg')?.addEventListener('click', async ()=>{
+            try{
+                await importRootSvg();
+            }catch(err){
+                alert('导入失败：' + (err && err.message ? err.message : '未知错误'));
+            }
+        });
         document.getElementById('map-add-resident')?.addEventListener('click', ()=>{
             addResidentMode = true;
             if(mapHint) mapHint.textContent = '点击地图位置添加村民信息';
@@ -1798,6 +1909,45 @@
         const userNameEl = document.querySelector('.user-name');
         const userRoleEl = document.querySelector('.user-role');
         const userAreaEl = document.getElementById('user-area');
+        const captchaCanvas = document.getElementById('captcha-canvas');
+        const captchaInput = loginForm?.querySelector('input[name="captcha"]');
+        let captchaCode = '';
+
+        function refreshCaptcha(){
+            captchaCode = String(Math.floor(1000 + Math.random()*9000));
+            if(!captchaCanvas) return;
+            const ctx = captchaCanvas.getContext('2d');
+            const w = captchaCanvas.width;
+            const h = captchaCanvas.height;
+            ctx.clearRect(0,0,w,h);
+            ctx.fillStyle = '#f3f4f6';
+            ctx.fillRect(0,0,w,h);
+            // noise lines
+            for(let i=0;i<5;i++){
+                ctx.strokeStyle = `rgba(${50+Math.random()*150|0},${50+Math.random()*150|0},${50+Math.random()*150|0},0.45)`;
+                ctx.beginPath();
+                ctx.moveTo(Math.random()*w, Math.random()*h);
+                ctx.lineTo(Math.random()*w, Math.random()*h);
+                ctx.stroke();
+            }
+            // digits
+            ctx.font = 'bold 22px Arial';
+            for(let i=0;i<captchaCode.length;i++){
+                const ch = captchaCode[i];
+                const x = 10 + i*24 + (Math.random()*6-3);
+                const y = 26 + (Math.random()*6-3);
+                const rot = (Math.random()*0.5-0.25);
+                ctx.save();
+                ctx.translate(x,y);
+                ctx.rotate(rot);
+                ctx.fillStyle = `rgb(${20+Math.random()*120|0},${20+Math.random()*120|0},${20+Math.random()*120|0})`;
+                ctx.fillText(ch, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        refreshCaptcha();
+        captchaCanvas?.addEventListener('click', refreshCaptcha);
 
         async function doLogin(username, password){
             loginError.textContent = '';
@@ -1819,11 +1969,23 @@
                 loadMapData();
             }catch(err){
                 loginError.textContent = '登录失败，请检查账号或密码';
+                refreshCaptcha();
+                if(captchaInput) captchaInput.value = '';
             }
         }
 
         loginForm.addEventListener('submit', (e)=>{
             e.preventDefault();
+            if(captchaInput){
+                const v = captchaInput.value.trim();
+                if(!v || v !== captchaCode){
+                    loginError.textContent = '验证码错误，请重试';
+                    refreshCaptcha();
+                    captchaInput.value = '';
+                    captchaInput.focus();
+                    return;
+                }
+            }
             doLogin(loginForm.username.value, loginForm.password.value);
         });
 

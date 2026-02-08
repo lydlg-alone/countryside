@@ -3,401 +3,976 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Village 数据库数据编辑工具</title>
+  <title>Village 数据库编辑器</title>
   <style>
-    :root {
+    :root{
       color-scheme: light;
-      --bg: #f6f8fb;
-      --card: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --primary: #2563eb;
-      --danger: #dc2626;
-      --border: #e5e7eb;
+      --bg:#f6f8fb;
+      --card:#fff;
+      --text:#111827;
+      --muted:#6b7280;
+      --primary:#2563eb;
+      --danger:#dc2626;
+      --border:#e5e7eb;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 24px; background: var(--bg); color: var(--text);
-      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
     }
-    header {
-      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-      margin-bottom: 16px;
+    header{
+      position:sticky; top:0; z-index:2;
+      background:rgba(246,248,251,.9);
+      backdrop-filter: blur(8px);
+      border-bottom:1px solid var(--border);
     }
-    h1 { font-size: 20px; margin: 0; }
-    .sub { color: var(--muted); font-size: 12px; }
-    .toolbar {
-      display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap;
+    .header-inner{
+      padding:16px 20px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
     }
-    input, select, button, textarea {
-      font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
-      background: #fff;
+    h1{font-size:18px; margin:0;}
+    .sub{color:var(--muted); font-size:12px;}
+    .toolbar{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      margin-left:auto;
+      flex-wrap:wrap;
     }
-    button { cursor: pointer; background: var(--primary); color: #fff; border-color: var(--primary); }
-    button.secondary { background: #fff; color: var(--text); border-color: var(--border); }
-    button.danger { background: var(--danger); border-color: var(--danger); }
-    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
-    .tab { padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; background: #fff; }
-    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .panel { display: none; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-    .panel.active { display: block; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    th { background: #f9fafb; }
-    .row-actions { display: flex; gap: 6px; }
-    .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-    .muted { color: var(--muted); font-size: 12px; }
-    .section-title { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+    input, select, button, textarea{
+      font:inherit;
+      padding:8px 10px;
+      border:1px solid var(--border);
+      border-radius:8px;
+      background:#fff;
+    }
+    textarea{font-family:var(--mono); font-size:12px; line-height:1.4;}
+    button{
+      cursor:pointer;
+      background:var(--primary);
+      color:#fff;
+      border-color:var(--primary);
+    }
+    button.secondary{background:#fff; color:var(--text); border-color:var(--border);}
+    button.danger{background:var(--danger); border-color:var(--danger);}
+    button:disabled{opacity:.5; cursor:not-allowed;}
+    .layout{
+      display:grid;
+      grid-template-columns: 280px 1fr;
+      gap:12px;
+      padding:12px;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:12px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      min-height: 0;
+    }
+    .card-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      padding:12px 12px;
+      border-bottom:1px solid var(--border);
+    }
+    .card-title{font-size:13px; color:var(--muted); margin:0;}
+    .card-body{padding:12px; min-height:0;}
+    .tables{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      height: calc(100vh - 92px);
+      min-height: 480px;
+    }
+    .tables .list{
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:6px;
+      background:#fff;
+      flex:1;
+      min-height:0;
+    }
+    .table-item{
+      padding:8px 10px;
+      border-radius:8px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      font-family:var(--mono);
+      font-size:12px;
+    }
+    .table-item:hover{background:#f3f4f6;}
+    .table-item.active{background:#eff6ff; color:#1d4ed8;}
+    .pill{
+      font-family:var(--mono);
+      font-size:11px;
+      color:#374151;
+      background:#f3f4f6;
+      border:1px solid var(--border);
+      padding:2px 6px;
+      border-radius:999px;
+    }
+    .main{
+      height: calc(100vh - 92px);
+      min-height: 480px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
+    }
+    .row{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .muted{color:var(--muted); font-size:12px;}
+    .mono{font-family:var(--mono);}
+    .schema{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:6px;
+      max-height:140px;
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:8px;
+      background:#fff;
+    }
+    .schema-line{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:12px;
+      padding:4px 6px;
+      border-radius:8px;
+    }
+    .schema-line:hover{background:#f9fafb;}
+    .schema-left{display:flex; gap:8px; align-items:center; min-width:0;}
+    .schema-name{font-family:var(--mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .schema-type{color:var(--muted); font-family:var(--mono); white-space:nowrap;}
+    .data{
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#fff;
+      flex:1;
+      min-height:0;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+    }
+    th,td{
+      padding:8px 10px;
+      border-bottom:1px solid var(--border);
+      vertical-align:top;
+      text-align:left;
+      max-width:360px;
+    }
+    th{
+      position:sticky; top:0;
+      background:#f9fafb;
+      z-index:1;
+      color:#374151;
+      font-family:var(--mono);
+      font-weight:600;
+      white-space:nowrap;
+    }
+    td .cell{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 360px;
+      display:block;
+    }
+    td.actions{
+      white-space:nowrap;
+      width:1%;
+    }
+    .actions button{
+      padding:6px 8px;
+      border-radius:8px;
+      font-size:12px;
+      margin-right:6px;
+    }
+    .status{
+      padding:8px 12px;
+      border-top:1px solid var(--border);
+      background:#fff;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      font-size:12px;
+    }
+    .toast{
+      position:fixed;
+      right:16px;
+      bottom:16px;
+      background:#111827;
+      color:#fff;
+      padding:10px 12px;
+      border-radius:10px;
+      box-shadow:var(--shadow);
+      font-size:12px;
+      max-width:520px;
+      display:none;
+      white-space:pre-wrap;
+    }
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.35);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:10;
+    }
+    .modal{
+      width:min(920px, 100%);
+      background:#fff;
+      border-radius:14px;
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .modal-header{
+      padding:12px 14px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .modal-title{margin:0; font-size:14px;}
+    .modal-body{padding:12px 14px;}
+    .modal-body textarea{width:100%; height:340px;}
+    .modal-footer{
+      padding:12px 14px;
+      border-top:1px solid var(--border);
+      display:flex;
+      gap:8px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+    @media (max-width: 900px){
+      .layout{grid-template-columns: 1fr;}
+      .tables{height:auto; min-height:auto;}
+      .main{height:auto; min-height:auto;}
+    }
   </style>
 </head>
 <body>
   <header>
-    <div>
-      <h1>Village 数据库数据编辑工具</h1>
-      <div class="sub">通过后端 API 读取/编辑数据（无需直连数据库）</div>
-    </div>
-    <div class="toolbar">
-      <label>API_BASE
-        <input id="apiBase" value="http://localhost:8080" />
-      </label>
-      <button class="secondary" id="refreshAll">刷新全部</button>
+    <div class="header-inner">
+      <div>
+        <h1>Village 数据库编辑器</h1>
+        <div class="sub">通过后端 API 查看/修改所有表数据（仅允许本机访问：<span class="mono">/api/ops/db/*</span>）</div>
+      </div>
+      <div class="toolbar">
+        <label class="muted">接口地址（API_BASE）</label>
+        <input id="apiBase" value="http://localhost:8080" style="width:220px;" />
+        <button class="secondary" id="reload" title="刷新表列表与数据">刷新</button>
+        <button class="secondary" id="logout" style="display:none;" title="退出管理员登录">退出管理员</button>
+      </div>
     </div>
   </header>
 
-  <div class="tabs" id="tabs"></div>
-
-  <section class="panel" id="panel-users">
-    <h3 class="section-title">用户管理</h3>
-    <div class="grid">
-      <input id="userName" placeholder="姓名" />
-      <input id="userRole" placeholder="角色" />
-      <input id="userUsername" placeholder="用户名" />
-      <input id="userPassword" placeholder="密码" />
-      <button id="addUser">新增用户</button>
+  <div id="loginView" style="display:none; padding:24px;">
+    <div class="card" style="max-width:420px; margin:40px auto;">
+      <div class="card-header">
+        <p class="card-title">管理员登录</p>
+        <span class="pill">仅本机</span>
+      </div>
+      <div class="card-body">
+        <div class="muted" style="margin-bottom:10px;">登录后才能进入数据库编辑界面（密码由后端校验）。</div>
+        <div class="row">
+          <input id="rootPassword" type="password" placeholder="管理员密码" style="flex:1; min-width:0;" />
+          <button id="rootLoginBtn" title="使用管理员密码登录">登录</button>
+        </div>
+        <div class="muted" id="rootLoginError" style="margin-top:10px; color:#dc2626;"></div>
+      </div>
     </div>
-    <table>
-      <thead><tr><th>ID</th><th>姓名</th><th>角色</th><th>用户名</th><th>密码</th><th>操作</th></tr></thead>
-      <tbody id="usersBody"></tbody>
-    </table>
-  </section>
+  </div>
 
-  <section class="panel" id="panel-transactions">
-    <h3 class="section-title">财务交易</h3>
-    <div class="grid">
-      <input id="txDesc" placeholder="描述" />
-      <input id="txAmount" placeholder="金额" />
-      <button id="addTx">新增交易</button>
-    </div>
-    <table>
-      <thead><tr><th>ID</th><th>描述</th><th>金额</th><th>时间</th></tr></thead>
-      <tbody id="txBody"></tbody>
-    </table>
-  </section>
+  <div id="appView" class="layout" style="display:none;">
+    <aside class="card tables">
+      <div class="card-header">
+        <div>
+          <p class="card-title">数据表</p>
+          <div class="muted" id="tableCount">-</div>
+        </div>
+        <button class="secondary" id="openInsert" title="插入新行">+ 新增</button>
+      </div>
+      <div class="card-body" style="padding:12px;">
+        <div class="row">
+          <input id="tableFilter" placeholder="过滤表名（模糊）" style="flex:1; min-width: 0;" />
+        </div>
+        <div style="height:10px"></div>
+        <div class="list" id="tableList"></div>
+      </div>
+    </aside>
 
-  <section class="panel" id="panel-warnings">
-    <h3 class="section-title">预警事件</h3>
-    <div class="grid">
-      <input id="warnTitle" placeholder="标题" />
-      <input id="warnMsg" placeholder="内容" />
-      <button id="addWarn">新增预警</button>
-    </div>
-    <table>
-      <thead><tr><th>ID</th><th>标题</th><th>内容</th><th>等级</th><th>状态</th><th>触发时间</th><th>操作</th></tr></thead>
-      <tbody id="warnBody"></tbody>
-    </table>
-  </section>
+    <main class="main">
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <p class="card-title">当前表</p>
+            <div class="muted"><span id="currentTable" class="mono">-</span> <span id="pkInfo" class="pill" style="display:none;"></span></div>
+          </div>
+          <div class="row">
+            <label class="muted">每页条数（limit）</label>
+            <input id="limit" value="200" style="width:92px;" />
+            <label class="muted">起始位置（offset）</label>
+            <input id="offset" value="0" style="width:92px;" />
+            <button class="secondary" id="loadRows">加载数据</button>
+            <button class="secondary" id="prevPage">上一页</button>
+            <button class="secondary" id="nextPage">下一页</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row" style="margin-bottom:10px;">
+            <div style="flex:1; min-width:240px;">
+              <div class="muted" style="margin-bottom:6px;">字段结构</div>
+              <div class="schema" id="schemaBox"></div>
+            </div>
+            <div style="flex:1; min-width:240px;">
+              <div class="muted" style="margin-bottom:6px;">提示</div>
+              <div class="muted">
+                - “编辑”会打开 JSON 编辑器，提交后调用 <span class="mono">PUT /api/ops/db/rows/{table}/{pk}</span><br/>
+                - “删除”会调用 <span class="mono">DELETE /api/ops/db/rows/{table}/{pk}</span><br/>
+                - “新增”会调用 <span class="mono">POST /api/ops/db/rows/{table}</span><br/>
+                - 若表没有单列主键（复合主键/无主键），将禁用编辑与删除
+              </div>
+            </div>
+          </div>
 
-  <section class="panel" id="panel-industry">
-    <h3 class="section-title">产业指标</h3>
-    <div class="grid">
-      <input id="metricName" placeholder="指标名称" />
-      <input id="metricValue" placeholder="数值" />
-      <input id="metricUnit" placeholder="单位" />
-      <button id="addMetric">新增指标</button>
-    </div>
-    <table>
-      <thead><tr><th>ID</th><th>名称</th><th>数值</th><th>单位</th><th>更新时间</th><th>操作</th></tr></thead>
-      <tbody id="metricBody"></tbody>
-    </table>
-  </section>
+          <div class="data">
+            <table>
+              <thead>
+                <tr id="theadRow"></tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="status">
+          <div class="muted" id="statusLeft">未加载</div>
+          <div class="muted" id="statusRight"></div>
+        </div>
+      </section>
+    </main>
+  </div>
 
-  <section class="panel" id="panel-ai">
-    <h3 class="section-title">AI 记录</h3>
-    <div class="grid">
-      <select id="aiTypeFilter">
-        <option value="">全部</option>
-        <option value="chat">问答</option>
-        <option value="summary">摘要</option>
-        <option value="advice">建议</option>
-      </select>
-      <button class="secondary" id="refreshAi">刷新记录</button>
+  <div class="modal-backdrop" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">编辑</h3>
+        <button class="secondary" id="modalClose">关闭</button>
+      </div>
+      <div class="modal-body">
+        <div class="muted" id="modalHint" style="margin-bottom:8px;"></div>
+        <textarea id="modalJson" spellcheck="false"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" id="modalFormat">格式化</button>
+        <button class="danger" id="modalDanger" style="display:none;">删除</button>
+        <button id="modalSave">保存</button>
+      </div>
     </div>
-    <div class="grid" style="margin-top:8px;">
-      <select id="aiType">
-        <option value="chat">问答</option>
-        <option value="advice">建议</option>
-        <option value="summary">摘要</option>
-      </select>
-      <input id="aiQuestion" placeholder="问题/标题" />
-      <input id="aiAnswer" placeholder="内容" />
-      <button id="addAi">保存记录</button>
-    </div>
-    <table>
-      <thead><tr><th>ID</th><th>类型</th><th>问题</th><th>回答</th><th>时间</th><th>操作</th></tr></thead>
-      <tbody id="aiBody"></tbody>
-    </table>
-  </section>
+  </div>
 
-  <section class="panel" id="panel-ops">
-    <h3 class="section-title">运维审计（只读）</h3>
-    <table>
-      <thead><tr><th>ID</th><th>动作</th><th>操作者</th><th>状态</th><th>时间</th></tr></thead>
-      <tbody id="opsBody"></tbody>
-    </table>
-  </section>
+  <div class="toast" id="toast"></div>
 
   <script>
-    const tabs = [
-      { id: 'users', label: '用户' },
-      { id: 'transactions', label: '财务' },
-      { id: 'warnings', label: '预警' },
-      { id: 'industry', label: '产业' },
-      { id: 'ai', label: 'AI记录' },
-      { id: 'ops', label: '运维审计' }
-    ];
+    const $ = (id) => document.getElementById(id);
+    const state = {
+      apiBase: 'http://localhost:8080',
+      token: localStorage.getItem('dbEditorRootToken') || '',
+      tables: [],
+      currentTable: null,
+      primaryKey: [],
+      columns: [],
+      schema: null,
+      rows: [],
+      total: 0,
+      limit: 200,
+      offset: 0,
+    };
 
-    const apiBaseInput = document.getElementById('apiBase');
-    const refreshAllBtn = document.getElementById('refreshAll');
-    const tabsContainer = document.getElementById('tabs');
+    const tableLabels = {
+      users: '账号信息',
+      transactions: '交易/收支',
+      warnings: '预警事件',
+      warning_logs: '预警日志',
+      industry_metrics: '产业指标',
+      map_data: '地图数据',
+      residents: '村民信息',
+      ai_records: 'AI 记录',
+      ops_audit: '运维审计',
+      ops_monitor: '监控指标',
+      ops_health: '健康检查',
+      ops_logs: '运维日志',
+      ops_backups: '备份任务',
+      ops_restores: '恢复操作',
+      api_keys: '接口密钥',
+      gov_tasks: '基层任务',
+      gov_checkins: '任务签到',
+      gov_acceptance: '任务验收',
+      gov_point_rules: '积分规则',
+      gov_point_audit: '积分审核',
+      gov_activities: '基层活动',
+      feedback_items: '民情反馈',
+      feedback_flow: '反馈流程',
+      feedback_announcements: '政务公告',
+    };
 
-    function api(path) { return apiBaseInput.value.replace(/\/$/, '') + path; }
+    const columnLabels = {
+      users: { id:'ID', username:'账号', password:'密码', name:'人物信息', role:'人物身份' },
+      transactions: { id:'ID', description:'描述', amount:'金额', category:'分类', owner:'所属/归属', status:'状态', time:'时间' },
+      warnings: { id:'ID', title:'标题', msg:'内容', severity:'等级', status:'状态', assignee:'指派人', handler:'处理人', notify_status:'通知状态', handled_at:'处理时间', triggered_at:'触发时间' },
+      warning_logs: { id:'ID', warning_id:'预警ID', action:'动作', actor:'操作者', note:'备注', created_at:'时间' },
+      industry_metrics: { id:'ID', name:'指标名称', value_num:'数值', unit:'单位', updated_at:'更新时间' },
+      map_data: { id:'ID', name:'名称', content:'内容', created_at:'创建时间' },
+      residents: { id:'ID', name:'姓名', address:'地址', phone:'电话', x_num:'X坐标', y_num:'Y坐标' },
+      ai_records: { id:'ID', type:'类型', question:'问题', answer:'回答', created_at:'时间' },
+      ops_audit: { id:'ID', action_desc:'动作', actor:'操作者', status:'状态', created_at:'时间' },
+      ops_monitor: { id:'ID', metric_name:'指标', metric_value:'数值', status:'状态', created_at:'时间' },
+      ops_health: { id:'ID', service_name:'服务', status:'状态', detail:'详情', checked_at:'检查时间' },
+      ops_logs: { id:'ID', level:'级别', source:'来源', message:'内容', created_at:'时间' },
+      ops_backups: { id:'ID', target:'目标', backup_type:'备份类型', status:'状态', operator:'操作人', started_at:'开始时间', finished_at:'结束时间' },
+      ops_restores: { id:'ID', backup_id:'备份ID', status:'状态', operator:'操作人', started_at:'开始时间', finished_at:'结束时间' },
+      api_keys: { id:'ID', name:'名称', key_value:'密钥', created_at:'创建时间' },
+      gov_tasks: { id:'ID', title:'标题', description:'描述', assignee:'指派人', status:'状态', due_at:'截止时间', created_at:'创建时间' },
+      gov_checkins: { id:'ID', task_id:'任务ID', user_name:'用户名', note:'备注', checkin_time:'签到时间' },
+      gov_acceptance: { id:'ID', task_id:'任务ID', result:'结果', reviewer:'审核人', note:'备注', accepted_at:'验收时间' },
+      gov_point_rules: { id:'ID', rule_name:'规则名称', points:'积分', status:'状态', created_at:'创建时间' },
+      gov_point_audit: { id:'ID', user_name:'用户名', rule_name:'规则名称', points:'积分', status:'状态', applied_at:'申请时间', approved_at:'审核时间' },
+      gov_activities: { id:'ID', title:'标题', organizer:'组织方', status:'状态', start_at:'开始时间', end_at:'结束时间', created_at:'创建时间' },
+      feedback_items: { id:'ID', title:'标题', content:'内容', reporter:'反馈人', type:'类型', status:'状态', created_at:'创建时间', updated_at:'更新时间' },
+      feedback_flow: { id:'ID', step_name:'步骤', owner:'负责人', status:'状态', updated_at:'更新时间' },
+      feedback_announcements: { id:'ID', title:'标题', content:'内容', publisher:'发布人', status:'状态', published_at:'发布时间', created_at:'创建时间' },
+    };
 
-    function setActive(tabId) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
-      document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tabId}`));
+    function getTableLabel(table){
+      return tableLabels[table] || table;
     }
 
-    tabs.forEach((t, idx) => {
-      const btn = document.createElement('div');
-      btn.className = 'tab' + (idx === 0 ? ' active' : '');
-      btn.dataset.tab = t.id;
-      btn.textContent = t.label;
-      btn.onclick = () => setActive(t.id);
-      tabsContainer.appendChild(btn);
-    });
-    setActive('users');
+    function getColumnLabel(table, column){
+      const direct = columnLabels[table] && columnLabels[table][column];
+      if (direct) return direct;
+      const common = {
+        id:'ID',
+        name:'名称',
+        title:'标题',
+        description:'描述',
+        content:'内容',
+        msg:'内容',
+        message:'内容',
+        status:'状态',
+        type:'类型',
+        role:'角色',
+        username:'用户名',
+        password:'密码',
+        owner:'所属/归属',
+        operator:'操作人',
+        actor:'操作者',
+        assignee:'指派人',
+        handler:'处理人',
+        severity:'等级',
+        level:'级别',
+        unit:'单位',
+        amount:'金额',
+        value:'数值',
+        value_num:'数值',
+        metric_name:'指标',
+        metric_value:'数值',
+        phone:'电话',
+        address:'地址',
+        x:'X坐标',
+        y:'Y坐标',
+        x_num:'X坐标',
+        y_num:'Y坐标',
+        created_at:'创建时间',
+        updated_at:'更新时间',
+        checked_at:'检查时间',
+        started_at:'开始时间',
+        finished_at:'结束时间',
+        triggered_at:'触发时间',
+        handled_at:'处理时间',
+        published_at:'发布时间',
+        due_at:'截止时间',
+        applied_at:'申请时间',
+        approved_at:'审核时间',
+        accepted_at:'验收时间',
+        checkin_time:'签到时间',
+        backup_id:'备份ID',
+        task_id:'任务ID',
+        rule_name:'规则名称',
+        points:'积分',
+        notify_status:'通知状态',
+        key_value:'密钥',
+        service_name:'服务',
+        detail:'详情',
+        source:'来源',
+        category:'分类',
+        reporter:'反馈人',
+        publisher:'发布人',
+        organizer:'组织方',
+        reviewer:'审核人',
+        note:'备注',
+        question:'问题',
+        answer:'回答',
+        time:'时间',
+      };
+      return common[column] || column;
+    }
 
-    async function request(path, options = {}) {
-      const res = await fetch(api(path), { headers: { 'Content-Type': 'application/json' }, ...options });
-      if (!res.ok) throw new Error(await res.text());
+    function api(path){
+      return state.apiBase.replace(/\/$/, '') + path;
+    }
+
+    function showToast(msg, ms = 4500){
+      const t = $('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => t.style.display = 'none', ms);
+    }
+
+    async function request(path, options = {}){
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+      if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+      const res = await fetch(api(path), { ...options, headers });
       const text = await res.text();
+      if (!res.ok) {
+        const err = new Error(text || (res.status + ' ' + res.statusText));
+        err.status = res.status;
+        throw err;
+      }
       return text ? JSON.parse(text) : null;
     }
 
-    async function loadUsers() {
-      const body = document.getElementById('usersBody');
-      body.innerHTML = '';
-      const list = await request('/api/users');
-      list.forEach(u => {
+    function showLoginView(message = ''){
+      $('loginView').style.display = 'block';
+      $('appView').style.display = 'none';
+      $('logout').style.display = 'none';
+      $('rootLoginError').textContent = message || '';
+      $('rootPassword').value = '';
+      $('rootPassword').focus();
+      setStatus('未登录管理员');
+    }
+
+    function showAppView(){
+      $('loginView').style.display = 'none';
+      $('appView').style.display = 'grid';
+      $('logout').style.display = 'inline-block';
+    }
+
+    async function rootLogin(password){
+      const res = await fetch(api('/api/ops/db/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        const err = new Error(text || (res.status + ' ' + res.statusText));
+        err.status = res.status;
+        throw err;
+      }
+      const data = text ? JSON.parse(text) : null;
+      const token = data && data.token ? String(data.token) : '';
+      if (!token) throw new Error('登录失败：未返回 token');
+      state.token = token;
+      localStorage.setItem('dbEditorRootToken', token);
+    }
+
+    function renderTableList(){
+      const filter = $('tableFilter').value.trim().toLowerCase();
+      const list = $('tableList');
+      list.innerHTML = '';
+      const tables = state.tables.filter(t => {
+        if (!filter) return true;
+        const name = (t || '').toLowerCase();
+        const label = (getTableLabel(t) || '').toLowerCase();
+        return name.includes(filter) || label.includes(filter);
+      });
+      $('tableCount').textContent = `共 ${state.tables.length} 张表，显示 ${tables.length} 张`;
+      tables.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'table-item' + (t === state.currentTable ? ' active' : '');
+        const left = document.createElement('span');
+        left.textContent = getTableLabel(t);
+        const right = document.createElement('span');
+        right.className = 'pill';
+        right.textContent = t;
+        div.append(left, right);
+        div.onclick = () => selectTable(t);
+        list.appendChild(div);
+      });
+    }
+
+    function setStatus(left, right = ''){
+      $('statusLeft').textContent = left || '';
+      $('statusRight').textContent = right || '';
+    }
+
+    function setPkInfo(pk){
+      const el = $('pkInfo');
+      if (!pk || pk.length === 0){
+        el.style.display = 'none';
+        return;
+      }
+      el.style.display = 'inline-block';
+      el.textContent = `主键（PK）：${pk.join(', ')}`;
+    }
+
+    function renderSchema(){
+      const box = $('schemaBox');
+      box.innerHTML = '';
+      if (!state.schema) return;
+      state.schema.columns.forEach(c => {
+        const line = document.createElement('div');
+        line.className = 'schema-line';
+        const left = document.createElement('div');
+        left.className = 'schema-left';
+        const name = document.createElement('div');
+        name.className = 'schema-name';
+        const label = getColumnLabel(state.currentTable, c.name);
+        name.textContent = label && label !== c.name ? `${label}（${c.name}）` : c.name;
+        const tags = [];
+        if (state.primaryKey.includes(c.name)) tags.push('主键(PK)');
+        if (c.auto && String(c.auto).toUpperCase() === 'YES') tags.push('自增(AUTO)');
+        if (c.nullable === 0) tags.push('非空(NOT NULL)');
+        left.appendChild(name);
+        if (tags.length){
+          const pill = document.createElement('span');
+          pill.className = 'pill';
+          pill.textContent = tags.join(' ');
+          left.appendChild(pill);
+        }
+        const type = document.createElement('div');
+        type.className = 'schema-type';
+        type.textContent = c.type || '';
+        line.append(left, type);
+        box.appendChild(line);
+      });
+    }
+
+    function truncate(v, n = 80){
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      if (s.length <= n) return s;
+      return s.slice(0, n) + '…';
+    }
+
+    function renderRows(){
+      const thead = $('theadRow');
+      const tbody = $('tbody');
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+      if (!state.currentTable) return;
+      const cols = state.columns.slice();
+      const hasSinglePk = state.primaryKey.length === 1;
+      const pkCol = hasSinglePk ? state.primaryKey[0] : null;
+
+      // header
+      cols.forEach(c => {
+        const th = document.createElement('th');
+        const cn = getColumnLabel(state.currentTable, c);
+        const top = document.createElement('div');
+        top.textContent = cn;
+        const sub = document.createElement('div');
+        sub.className = 'muted mono';
+        sub.style.fontSize = '11px';
+        sub.style.marginTop = '2px';
+        sub.textContent = c;
+        th.append(top, sub);
+        thead.appendChild(th);
+      });
+      const thA = document.createElement('th');
+      thA.textContent = '操作';
+      thead.appendChild(thA);
+
+      // rows
+      state.rows.forEach(r => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${u.id}</td><td>${u.name}</td><td>${u.role}</td><td>${u.username || ''}</td><td>${u.password || ''}</td>`;
+        cols.forEach(c => {
+          const td = document.createElement('td');
+          const span = document.createElement('span');
+          span.className = 'cell';
+          span.title = r[c] == null ? '' : String(r[c]);
+          span.textContent = r[c] == null ? '' : truncate(r[c]);
+          td.appendChild(span);
+          tr.appendChild(td);
+        });
         const actionTd = document.createElement('td');
-        const wrap = document.createElement('div');
-        wrap.className = 'row-actions';
+        actionTd.className = 'actions';
+
+        const viewBtn = document.createElement('button');
+        viewBtn.className = 'secondary';
+        viewBtn.textContent = '查看';
+        viewBtn.onclick = () => openModal('查看', r, { readOnly: true });
+        actionTd.appendChild(viewBtn);
+
         const editBtn = document.createElement('button');
         editBtn.className = 'secondary';
         editBtn.textContent = '编辑';
-        editBtn.onclick = async () => {
-          const name = prompt('姓名', u.name);
-          if (name === null) return;
-          const role = prompt('角色', u.role);
-          if (role === null) return;
-          await request(`/api/users/${u.id}`, { method: 'PUT', body: JSON.stringify({ name, role }) });
-          await loadUsers();
-        };
+        editBtn.disabled = !hasSinglePk || r[pkCol] == null || r[pkCol] === '';
+        editBtn.onclick = () => openModal('编辑', r, { readOnly: false });
+        actionTd.appendChild(editBtn);
+
         const delBtn = document.createElement('button');
         delBtn.className = 'danger';
         delBtn.textContent = '删除';
+        delBtn.disabled = editBtn.disabled;
         delBtn.onclick = async () => {
-          if (!confirm('确认删除该用户？')) return;
-          await request(`/api/users/${u.id}`, { method: 'DELETE' });
-          await loadUsers();
+          if (!confirm(`确认删除 ${state.currentTable} 里 PK=${r[pkCol]} 的这行？`)) return;
+          await request(`/api/ops/db/rows/${encodeURIComponent(state.currentTable)}/${encodeURIComponent(r[pkCol])}`, { method: 'DELETE' });
+          await loadRows();
+          showToast('已删除');
         };
-        wrap.append(editBtn, delBtn);
-        actionTd.appendChild(wrap);
+        actionTd.appendChild(delBtn);
+
         tr.appendChild(actionTd);
-        body.appendChild(tr);
+        tbody.appendChild(tr);
       });
     }
 
-    async function loadTransactions() {
-      const body = document.getElementById('txBody');
-      body.innerHTML = '';
-      const list = await request('/api/finance/transactions');
-      list.forEach(t => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${t.id}</td><td>${t.description}</td><td>${t.amount}</td><td>${t.time || ''}</td>`;
-        body.appendChild(tr);
-      });
+    async function loadTables(){
+      setStatus('加载表列表…');
+      const data = await request('/api/ops/db/tables');
+      state.tables = data.tables || [];
+      renderTableList();
+      setStatus('表列表已加载', `数据库：${data.db || ''}`);
     }
 
-    async function loadWarnings() {
-      const body = document.getElementById('warnBody');
-      body.innerHTML = '';
-      const list = await request('/api/warnings/events');
-      list.forEach(w => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${w.id}</td><td>${w.title}</td><td>${w.msg}</td><td>${w.severity}</td><td>${w.status}</td><td>${w.triggered_at}</td>`;
-        const actionTd = document.createElement('td');
-        const wrap = document.createElement('div');
-        wrap.className = 'row-actions';
-        const delBtn = document.createElement('button');
-        delBtn.className = 'danger';
-        delBtn.textContent = '删除';
-        delBtn.onclick = async () => {
-          if (!confirm('确认删除该预警？')) return;
-          await request(`/api/warnings/events/${w.id}`, { method: 'DELETE' });
-          await loadWarnings();
-        };
-        wrap.appendChild(delBtn);
-        actionTd.appendChild(wrap);
-        tr.appendChild(actionTd);
-        body.appendChild(tr);
-      });
+    async function loadSchema(){
+      if (!state.currentTable) return;
+      setStatus(`加载字段结构：${state.currentTable}…`);
+      const schema = await request(`/api/ops/db/schema/${encodeURIComponent(state.currentTable)}`);
+      state.schema = schema;
+      state.primaryKey = schema.primaryKey || [];
+      state.columns = (schema.columns || []).map(c => c.name);
+      $('currentTable').textContent = `${getTableLabel(state.currentTable)}（${state.currentTable}）`;
+      setPkInfo(state.primaryKey);
+      renderSchema();
+      setStatus(`字段结构已加载：${state.currentTable}`, `字段数：${state.columns.length}`);
     }
 
-    async function loadMetrics() {
-      const body = document.getElementById('metricBody');
-      body.innerHTML = '';
-      const list = await request('/api/industry/metrics');
-      list.forEach(m => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${m.id}</td><td>${m.name}</td><td>${m.value}</td><td>${m.unit}</td><td>${m.updated_at || ''}</td>`;
-        const actionTd = document.createElement('td');
-        const wrap = document.createElement('div');
-        wrap.className = 'row-actions';
-        const editBtn = document.createElement('button');
-        editBtn.className = 'secondary';
-        editBtn.textContent = '编辑';
-        editBtn.onclick = async () => {
-          const name = prompt('名称', m.name);
-          if (name === null) return;
-          const value = prompt('数值', m.value);
-          if (value === null) return;
-          const unit = prompt('单位', m.unit);
-          if (unit === null) return;
-          await request(`/api/industry/metrics/${m.id}`, { method: 'PUT', body: JSON.stringify({ name, value, unit }) });
-          await loadMetrics();
-        };
-        const delBtn = document.createElement('button');
-        delBtn.className = 'danger';
-        delBtn.textContent = '删除';
-        delBtn.onclick = async () => {
-          if (!confirm('确认删除该指标？')) return;
-          await request(`/api/industry/metrics/${m.id}`, { method: 'DELETE' });
-          await loadMetrics();
-        };
-        wrap.append(editBtn, delBtn);
-        actionTd.appendChild(wrap);
-        tr.appendChild(actionTd);
-        body.appendChild(tr);
-      });
+    async function loadRows(){
+      if (!state.currentTable) return;
+      state.limit = Number($('limit').value || 200) || 200;
+      state.offset = Number($('offset').value || 0) || 0;
+      setStatus(`加载数据：${state.currentTable}…`);
+      const data = await request(`/api/ops/db/rows/${encodeURIComponent(state.currentTable)}?limit=${encodeURIComponent(state.limit)}&offset=${encodeURIComponent(state.offset)}`);
+      state.rows = data.rows || [];
+      state.total = data.total || 0;
+      state.columns = data.columns || state.columns;
+      renderRows();
+      setStatus(
+        `已加载 ${state.rows.length} 行（起始=${state.offset}，每页=${state.limit}）`,
+        `总行数：${state.total}`
+      );
     }
 
-    async function loadAiRecords() {
-      const body = document.getElementById('aiBody');
-      body.innerHTML = '';
-      const type = document.getElementById('aiTypeFilter').value;
-      const list = await request(`/api/ai/records${type ? `?type=${encodeURIComponent(type)}` : ''}`);
-      list.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${r.id}</td><td>${r.type || ''}</td><td>${r.question || ''}</td><td>${r.answer || ''}</td><td>${r.created_at || ''}</td>`;
-        const actionTd = document.createElement('td');
-        const wrap = document.createElement('div');
-        wrap.className = 'row-actions';
-        const delBtn = document.createElement('button');
-        delBtn.className = 'danger';
-        delBtn.textContent = '删除';
-        delBtn.onclick = async () => {
-          if (!confirm('确认删除该记录？')) return;
-          await request(`/api/ai/records/${r.id}`, { method: 'DELETE' });
-          await loadAiRecords();
-        };
-        wrap.appendChild(delBtn);
-        actionTd.appendChild(wrap);
-        tr.appendChild(actionTd);
-        body.appendChild(tr);
-      });
+    async function selectTable(table){
+      state.currentTable = table;
+      renderTableList();
+      try{
+        await loadSchema();
+        $('offset').value = '0';
+        await loadRows();
+      }catch(err){
+        showToast('加载失败：' + err.message);
+        setStatus('加载失败', err.message);
+      }
     }
 
-    async function loadOpsAudit() {
-      const body = document.getElementById('opsBody');
-      body.innerHTML = '';
-      const list = await request('/api/ops/audit');
-      list.forEach(o => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${o.id}</td><td>${o.action}</td><td>${o.actor}</td><td>${o.status}</td><td>${o.created_at}</td>`;
-        body.appendChild(tr);
-      });
+    function openModal(mode, row, { readOnly }){
+      const modal = $('modal');
+      $('modalTitle').textContent = `${mode}：${state.currentTable}`;
+      const hasSinglePk = state.primaryKey.length === 1;
+      const pkCol = hasSinglePk ? state.primaryKey[0] : null;
+      const pkValue = pkCol ? row[pkCol] : null;
+      $('modalHint').textContent = readOnly
+        ? '只读查看（不会写入数据库）'
+        : `保存会写入数据库（PK=${pkCol}，值=${pkValue}）`;
+      $('modalJson').value = JSON.stringify(row ?? {}, null, 2);
+      $('modalJson').readOnly = !!readOnly;
+
+      $('modalDanger').style.display = 'none';
+      $('modalSave').style.display = readOnly ? 'none' : 'inline-block';
+      $('modalFormat').style.display = 'inline-block';
+
+      $('modalSave').onclick = async () => {
+        try{
+          const obj = JSON.parse($('modalJson').value || '{}');
+          if (!hasSinglePk) throw new Error('该表不支持编辑：没有单列主键');
+          if (obj[pkCol] == null || obj[pkCol] === '') throw new Error('缺少主键值，无法保存');
+          await request(`/api/ops/db/rows/${encodeURIComponent(state.currentTable)}/${encodeURIComponent(obj[pkCol])}`, {
+            method: 'PUT',
+            body: JSON.stringify(obj),
+          });
+          closeModal();
+          await loadRows();
+          showToast('已保存');
+        }catch(err){
+          showToast('保存失败：' + err.message);
+        }
+      };
+
+      $('modalFormat').onclick = () => {
+        try{
+          const obj = JSON.parse($('modalJson').value || '{}');
+          $('modalJson').value = JSON.stringify(obj, null, 2);
+        }catch(err){
+          showToast('JSON 无法解析：' + err.message);
+        }
+      };
+
+      $('modalClose').onclick = closeModal;
+      modal.style.display = 'flex';
+      modal.onclick = (e) => { if (e.target === modal) closeModal(); };
     }
 
-    document.getElementById('addUser').onclick = async () => {
-      const name = document.getElementById('userName').value;
-      const role = document.getElementById('userRole').value;
-      const username = document.getElementById('userUsername').value;
-      const password = document.getElementById('userPassword').value;
-      await request('/api/users', { method: 'POST', body: JSON.stringify({ name, role, username, password }) });
-      await loadUsers();
-    };
+    function closeModal(){
+      const modal = $('modal');
+      modal.style.display = 'none';
+      modal.onclick = null;
+    }
 
-    document.getElementById('addTx').onclick = async () => {
-      const description = document.getElementById('txDesc').value;
-      const amount = document.getElementById('txAmount').value;
-      await request('/api/finance/transactions', { method: 'POST', body: JSON.stringify({ description, amount }) });
-      await loadTransactions();
-    };
+    function openInsertModal(){
+      const empty = {};
+      // Provide columns as hints (no values) for convenience
+      if (state.columns && state.columns.length){
+        state.columns.forEach(c => { empty[c] = null; });
+      }
+      $('modalTitle').textContent = `新增：${state.currentTable || ''}`;
+      $('modalHint').textContent = '保存会插入新行（可删除不需要的字段；值为 null 表示插入 NULL）';
+      $('modalJson').value = JSON.stringify(empty, null, 2);
+      $('modalJson').readOnly = false;
+      $('modalDanger').style.display = 'none';
+      $('modalSave').style.display = 'inline-block';
+      $('modalFormat').style.display = 'inline-block';
 
-    document.getElementById('addWarn').onclick = async () => {
-      const title = document.getElementById('warnTitle').value;
-      const msg = document.getElementById('warnMsg').value;
-      await request('/api/warnings/events', { method: 'POST', body: JSON.stringify({ title, msg }) });
-      await loadWarnings();
-    };
+      $('modalSave').onclick = async () => {
+        try{
+          if (!state.currentTable) throw new Error('请先选择数据表');
+          const obj = JSON.parse($('modalJson').value || '{}');
+          await request(`/api/ops/db/rows/${encodeURIComponent(state.currentTable)}`, {
+            method: 'POST',
+            body: JSON.stringify(obj),
+          });
+          closeModal();
+          await loadRows();
+          showToast('已新增');
+        }catch(err){
+          showToast('新增失败：' + err.message);
+        }
+      };
+      $('modalFormat').onclick = () => {
+        try{
+          const obj = JSON.parse($('modalJson').value || '{}');
+          $('modalJson').value = JSON.stringify(obj, null, 2);
+        }catch(err){
+          showToast('JSON 无法解析：' + err.message);
+        }
+      };
+      $('modalClose').onclick = closeModal;
+      const modal = $('modal');
+      modal.style.display = 'flex';
+      modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+    }
 
-    document.getElementById('addMetric').onclick = async () => {
-      const name = document.getElementById('metricName').value;
-      const value = document.getElementById('metricValue').value;
-      const unit = document.getElementById('metricUnit').value;
-      await request('/api/industry/metrics', { method: 'POST', body: JSON.stringify({ name, value, unit }) });
-      await loadMetrics();
+    $('apiBase').addEventListener('change', () => { state.apiBase = $('apiBase').value.trim() || 'http://localhost:8080'; });
+    $('reload').onclick = async () => {
+      state.apiBase = $('apiBase').value.trim() || 'http://localhost:8080';
+      try{
+        if (!state.token) { showLoginView('请先登录管理员'); return; }
+        await loadTables();
+        if (state.currentTable && state.tables.includes(state.currentTable)) {
+          await selectTable(state.currentTable);
+        } else if (state.tables.length) {
+          await selectTable(state.tables[0]);
+        }
+      }catch(err){
+        if (err && err.status === 401) {
+          state.token = '';
+          localStorage.removeItem('dbEditorRootToken');
+          showLoginView('登录已失效，请重新登录管理员');
+          return;
+        }
+        showToast('刷新失败：' + err.message);
+        setStatus('刷新失败', err.message);
+      }
     };
-
-    document.getElementById('addAi').onclick = async () => {
-      const type = document.getElementById('aiType').value;
-      const question = document.getElementById('aiQuestion').value;
-      const answer = document.getElementById('aiAnswer').value;
-      await request('/api/ai/records', { method: 'POST', body: JSON.stringify({ type, question, answer }) });
-      await loadAiRecords();
+    $('logout').onclick = () => {
+      state.token = '';
+      localStorage.removeItem('dbEditorRootToken');
+      showLoginView('已退出管理员');
     };
-
-    document.getElementById('refreshAi').onclick = loadAiRecords;
-
-    refreshAllBtn.onclick = async () => {
-      await Promise.all([
-        loadUsers(),
-        loadTransactions(),
-        loadWarnings(),
-        loadMetrics(),
-        loadAiRecords(),
-        loadOpsAudit()
-      ]);
+    $('tableFilter').addEventListener('input', renderTableList);
+    $('loadRows').onclick = loadRows;
+    $('prevPage').onclick = async () => {
+      const limit = Number($('limit').value || 200) || 200;
+      const offset = Math.max(0, (Number($('offset').value || 0) || 0) - limit);
+      $('offset').value = String(offset);
+      await loadRows();
     };
+    $('nextPage').onclick = async () => {
+      const limit = Number($('limit').value || 200) || 200;
+      const offset = (Number($('offset').value || 0) || 0) + limit;
+      $('offset').value = String(offset);
+      await loadRows();
+    };
+    $('openInsert').onclick = openInsertModal;
+
+    $('rootLoginBtn').onclick = async () => {
+      $('rootLoginError').textContent = '';
+      const pwd = $('rootPassword').value || '';
+      try{
+        await rootLogin(pwd);
+        showAppView();
+        await loadTables();
+        if (state.tables.length) await selectTable(state.tables[0]);
+      }catch(err){
+        $('rootLoginError').textContent = err && err.status === 401 ? '密码错误' : ('登录失败：' + (err && err.message ? err.message : '未知错误'));
+      }
+    };
+    $('rootPassword').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') $('rootLoginBtn').click();
+    });
 
     (async () => {
-      try {
-        await refreshAllBtn.onclick();
-      } catch (err) {
-        alert('加载失败：' + err.message);
+      state.apiBase = $('apiBase').value.trim() || 'http://localhost:8080';
+      if (!state.token) { showLoginView(); return; }
+      try{
+        await loadTables();
+        showAppView();
+        if (state.tables.length) await selectTable(state.tables[0]);
+      }catch(err){
+        state.token = '';
+        localStorage.removeItem('dbEditorRootToken');
+        showLoginView('请先登录管理员');
       }
     })();
   </script>

@@ -1,5 +1,6 @@
 @echo off
-setlocal
+chcp 65001 >nul
+setlocal EnableExtensions
 set BASEDIR=%~dp0
 set DIST=%BASEDIR%dist
 set JRE_ZIP=%BASEDIR%OpenJDK8U-jre_x64_windows_hotspot_8u472b08.zip
@@ -59,12 +60,18 @@ if not exist "%BASEDIR%runtime\mysql\my.ini" (
   )
 )
 
-set JAR=%BASEDIR%village-admin-system\target\village-admin-system-0.1.0-SNAPSHOT-shaded.jar
+set "JAR_DIR=%BASEDIR%village-admin-system\target"
+set "JAR="
+for /f "delims=" %%f in ('dir /b /a-d /o-d "%JAR_DIR%\village-admin-system-*.jar" 2^>nul ^| findstr /v /i "original-"') do (
+  set "JAR=%JAR_DIR%\%%f"
+  goto found_jar
+)
+:found_jar
 where mvn >nul 2>nul
 if %ERRORLEVEL%==0 (
   echo [INFO] 构建后端 Jar ...
   mvn -f "%BASEDIR%village-admin-system\pom.xml" package -DskipTests
-) else if not exist "%JAR%" (
+) else if not defined JAR (
   echo [ERROR] 未找到后端 Jar 且未检测到 Maven，请先构建后再打包。
   exit /b 1
 )
