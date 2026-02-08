@@ -14,6 +14,7 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 - **2. 用户与权限管理**
 	- 用户新增、编辑、删除与登录。
 	- 角色与权限信息展示。
+	- 登录支持验证码校验与密码加密存储。
 
 - **3. 财务与收支管理**
 	- 收支记录新增、列表、审核与统计。
@@ -78,6 +79,7 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 
 ### 接口设计（REST 风格，JSON）
 - 登录：`POST /api/auth/login`
+- 验证码：`GET /api/auth/captcha`
 - 用户：`GET /api/users`、`POST /api/users`、`PUT /api/users/{id}`
 - 收支：`GET /api/finance/transactions`、`POST /api/finance/transactions`
 - 预警：`GET /api/warnings/events`、`POST /api/warnings/rules`
@@ -120,6 +122,9 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 - 或运行 `start-frontend.bat`（会启动本地静态服务并自动打开页面）。
 - 前端默认加载主目录 `地图.svg`；如需从数据库加载，请使用 `db-editor.html` 保存 SVG。
 - 后端默认地址为 `http://localhost:8080`。
+
+#### 数据库编辑工具
+- `db-editor.html` 需要 root 码 `wslydlg` 才能进入。
 
 #### 本地开发（可选）
 ```powershell
