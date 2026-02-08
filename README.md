@@ -64,7 +64,6 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 ├─ build-offline.bat                       # 打包离线运行环境
 ├─ start-local.bat                         # 启动后端+MySQL
 ├─ stop-local.bat                          # 停止后端+MySQL
-├─ start-backend.bat                       # 仅启动后端
 ├─ start-frontend.bat                      # 启动前端静态服务
 ├─ 地图.svg                                # 主目录地图（SVG）
 └─ README.md                               # 项目说明
@@ -98,10 +97,6 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 3. 运行项目根目录 `start-local.bat`（会同时启动 MySQL + 后端，窗口保持不退出）。
 
 停止服务：运行 `stop-local.bat`。
-
-#### 仅启动后端（需要 MySQL 已启动）
-- 先确保 MySQL 正在运行（可先运行 `start-local.bat` 让其保持运行）。
-- 运行 `start-backend.bat` 启动后端（前台运行，Ctrl+C 可结束；窗口保持不退出）。
 
 ## Windows 离线包说明
 

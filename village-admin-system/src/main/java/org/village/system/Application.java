@@ -6,15 +6,26 @@ import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Base64;
+import java.util.concurrent.ConcurrentHashMap;
+import java.security.SecureRandom;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import de.mkammerer.argon2.Argon2;
+import de.mkammerer.argon2.Argon2Factory;
 
 public class Application {
     // persistence config (environment or defaults)
@@ -26,6 +37,18 @@ public class Application {
 
     private static javax.sql.DataSource dataSource = null;
     private static volatile boolean tablesEnsured = false;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final int CAPTCHA_EXPIRES_SECONDS = 120;
+    private static final Map<String, CaptchaEntry> CAPTCHA_STORE = new ConcurrentHashMap<>();
+    private static final int ARGON2_ITERATIONS = 3;
+    private static final int ARGON2_MEMORY_KB = 65536;
+    private static final int ARGON2_PARALLELISM = 1;
+
+    private static class CaptchaEntry {
+        final String code;
+        final long expiresAt;
+        CaptchaEntry(String code, long expiresAt){ this.code = code; this.expiresAt = expiresAt; }
+    }
 
     static {
         try {
@@ -61,6 +84,7 @@ public class Application {
         server.createContext("/api/warnings/logs", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleWarningLogs(exchange); });
         server.createContext("/api/warnings/stats", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleWarningStats(exchange); });
         server.createContext("/api/auth/login", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleLogin(exchange); });
+        server.createContext("/api/auth/captcha", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleCaptcha(exchange); });
         server.createContext("/api/auth/password", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handlePasswordChange(exchange); });
         server.createContext("/api/industry/metrics", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleIndustryMetrics(exchange); });
         server.createContext("/api/industry/metrics/", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleIndustryMetricById(exchange); });
@@ -372,15 +396,16 @@ public class Application {
 
         if ("POST".equals(method)){
             String body = readBody(ex);
-            String name = extractJsonField(body, "name");
-            String role = extractJsonField(body, "role");
-            String username = extractJsonField(body, "username");
-            String password = extractJsonField(body, "password");
+            String name = extractJsonString(body, "name");
+            String role = extractJsonString(body, "role");
+            String username = extractJsonString(body, "username");
+            String password = extractJsonString(body, "password");
+            String passwordHash = password == null ? null : hashPassword(password);
             try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO users (name,role,username,password) VALUES (?,?,?,?)", java.sql.Statement.RETURN_GENERATED_KEYS)){
                 ps.setString(1, name==null?"用户":name);
                 ps.setString(2, role==null?"普通用户":role);
                 ps.setString(3, username);
-                ps.setString(4, password);
+                ps.setString(4, passwordHash);
                 ps.executeUpdate();
                 java.sql.ResultSet g = ps.getGeneratedKeys(); int id = -1; if (g.next()) id = g.getInt(1);
                 writeJson(ex,201,"{\"id\":"+id+",\"name\":\""+escape(name==null?"用户":name)+"\",\"role\":\""+escape(role==null?"普通用户":role)+"\"}");
@@ -1317,17 +1342,35 @@ public class Application {
         ensureTablesSafe();
         if (!"POST".equals(ex.getRequestMethod())) { writeText(ex,405,"Method Not Allowed"); return; }
         String body = readBody(ex);
-        String username = extractJsonField(body,"username");
-        String password = extractJsonField(body,"password");
+        String username = extractJsonString(body,"username");
+        String password = extractJsonString(body,"password");
+        String captchaToken = extractJsonString(body,"captchaToken");
+        String captchaCode = extractJsonString(body,"captchaCode");
         if (username==null || username.isEmpty()) { writeJson(ex,400,"{\"error\":\"username required\"}"); return; }
         if (password==null || password.isEmpty()) { writeJson(ex,400,"{\"error\":\"password required\"}"); return; }
-        try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,role FROM users WHERE username=? AND password=? LIMIT 1")){
+        if (!verifyCaptcha(captchaToken, captchaCode)) { writeJson(ex,401,"{\"error\":\"captcha invalid\"}"); return; }
+        try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,role,username,password FROM users WHERE username=? LIMIT 1")){
             ps.setString(1, username);
-            ps.setString(2, password);
             java.sql.ResultSet rs = ps.executeQuery();
-            int id=-1; String name=null; String role=null;
-            if (rs.next()){ id = rs.getInt("id"); name = rs.getString("name"); role = rs.getString("role"); }
+            int id=-1; String name=null; String role=null; String storedPass=null;
+            if (rs.next()){
+                id = rs.getInt("id");
+                name = rs.getString("name");
+                role = rs.getString("role");
+                storedPass = rs.getString("password");
+            }
             if (id==-1){ writeJson(ex,401,"{\"error\":\"invalid credentials\"}"); return; }
+            if (!verifyPassword(password, storedPass)) { writeJson(ex,401,"{\"error\":\"invalid credentials\"}"); return; }
+            if (storedPass == null || !storedPass.startsWith("$argon2")) {
+                String newHash = hashPassword(password);
+                if (newHash != null){
+                    try (java.sql.PreparedStatement ups = c.prepareStatement("UPDATE users SET password=? WHERE id=?")){
+                        ups.setString(1, newHash);
+                        ups.setInt(2, id);
+                        ups.executeUpdate();
+                    }
+                }
+            }
             writeJson(ex,200,"{\"token\":\"mock-token-123\",\"user\":{\"id\":"+id+",\"name\":\""+escape(name==null?"user":name)+"\",\"role\":\""+escape(role==null?"":role)+"\",\"username\":\""+escape(username)+"\"}}"); return;
         } catch(Exception e){ writeText(ex,500,"db error: "+e.getMessage()); return; }
     }
@@ -1336,26 +1379,39 @@ public class Application {
         ensureTablesSafe();
         if (!"POST".equals(ex.getRequestMethod())) { writeText(ex,405,"Method Not Allowed"); return; }
         String body = readBody(ex);
-        String username = extractJsonField(body,"username");
-        String oldPassword = extractJsonField(body,"oldPassword");
-        String newPassword = extractJsonField(body,"newPassword");
+        String username = extractJsonString(body,"username");
+        String oldPassword = extractJsonString(body,"oldPassword");
+        String newPassword = extractJsonString(body,"newPassword");
         if (username==null || username.isEmpty()) { writeJson(ex,400,"{\"error\":\"username required\"}"); return; }
         if (oldPassword==null || oldPassword.isEmpty()) { writeJson(ex,400,"{\"error\":\"oldPassword required\"}"); return; }
         if (newPassword==null || newPassword.isEmpty()) { writeJson(ex,400,"{\"error\":\"newPassword required\"}"); return; }
         try (java.sql.Connection c = openConnection()){
-            try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id FROM users WHERE username=? AND password=? LIMIT 1")){
+            String storedPass = null;
+            try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT password FROM users WHERE username=? LIMIT 1")){
                 ps.setString(1, username);
-                ps.setString(2, oldPassword);
                 java.sql.ResultSet rs = ps.executeQuery();
                 if (!rs.next()){ writeJson(ex,401,"{\"error\":\"invalid credentials\"}"); return; }
+                storedPass = rs.getString("password");
             }
+            if (!verifyPassword(oldPassword, storedPass)) { writeJson(ex,401,"{\"error\":\"invalid credentials\"}"); return; }
+            String newHash = hashPassword(newPassword);
             try (java.sql.PreparedStatement ps = c.prepareStatement("UPDATE users SET password=? WHERE username=?")){
-                ps.setString(1, newPassword);
+                ps.setString(1, newHash);
                 ps.setString(2, username);
                 ps.executeUpdate();
                 writeJson(ex,200,"{\"ok\":true}"); return;
             }
         } catch(Exception e){ writeText(ex,500,"db error: "+e.getMessage()); return; }
+    }
+
+    private static void handleCaptcha(HttpExchange ex) throws IOException {
+        if (!"GET".equals(ex.getRequestMethod())) { writeText(ex,405,"Method Not Allowed"); return; }
+        String code = randomDigits(4);
+        String token = randomToken(24);
+        long expiresAt = System.currentTimeMillis() + CAPTCHA_EXPIRES_SECONDS * 1000L;
+        CAPTCHA_STORE.put(token, new CaptchaEntry(code, expiresAt));
+        String image = createCaptchaImageBase64(code);
+        writeJson(ex,200,"{\"token\":\""+escape(token)+"\",\"image\":\""+image+"\",\"expiresIn\":"+CAPTCHA_EXPIRES_SECONDS+"}");
     }
 
     private static String loadApiKey(String name) throws Exception {
@@ -2045,6 +2101,84 @@ public class Application {
     private static String escape(String s){
         if (s == null) return "";
         return s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n");
+    }
+
+    private static String hashPassword(String password){
+        if (password == null || password.isEmpty()) return null;
+        Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
+        char[] pwd = password.toCharArray();
+        try {
+            return argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, pwd);
+        } finally {
+            argon2.wipeArray(pwd);
+        }
+    }
+
+    private static boolean verifyPassword(String password, String storedHash){
+        if (password == null || storedHash == null || storedHash.isEmpty()) return false;
+        if (!storedHash.startsWith("$argon2")) {
+            return storedHash.equals(password);
+        }
+        Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
+        char[] pwd = password.toCharArray();
+        try {
+            return argon2.verify(storedHash, pwd);
+        } finally {
+            argon2.wipeArray(pwd);
+        }
+    }
+
+    private static String randomDigits(int len){
+        StringBuilder sb = new StringBuilder();
+        for (int i=0;i<len;i++){
+            sb.append(SECURE_RANDOM.nextInt(10));
+        }
+        return sb.toString();
+    }
+
+    private static String randomToken(int len){
+        final String alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder sb = new StringBuilder();
+        for (int i=0;i<len;i++){
+            sb.append(alphabet.charAt(SECURE_RANDOM.nextInt(alphabet.length())));
+        }
+        return sb.toString();
+    }
+
+    private static boolean verifyCaptcha(String token, String code){
+        if (token == null || code == null) return false;
+        CaptchaEntry entry = CAPTCHA_STORE.remove(token);
+        if (entry == null) return false;
+        if (System.currentTimeMillis() > entry.expiresAt) return false;
+        return entry.code.equalsIgnoreCase(code.trim());
+    }
+
+    private static String createCaptchaImageBase64(String code){
+        int width = 120;
+        int height = 40;
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(245, 247, 251));
+        g.fillRect(0, 0, width, height);
+        g.setFont(new Font("Arial", Font.BOLD, 22));
+        g.setColor(new Color(37, 99, 235));
+        g.drawString(code, 18, 28);
+        g.setColor(new Color(148, 163, 184));
+        for (int i=0;i<4;i++){
+            int x1 = SECURE_RANDOM.nextInt(width);
+            int y1 = SECURE_RANDOM.nextInt(height);
+            int x2 = SECURE_RANDOM.nextInt(width);
+            int y2 = SECURE_RANDOM.nextInt(height);
+            g.drawLine(x1, y1, x2, y2);
+        }
+        g.dispose();
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()){
+            javax.imageio.ImageIO.write(img, "png", out);
+            return Base64.getEncoder().encodeToString(out.toByteArray());
+        } catch (Exception e){
+            return "";
+        }
     }
 
     private static String extractJsonString(String json, String key){

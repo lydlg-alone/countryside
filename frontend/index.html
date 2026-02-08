@@ -459,6 +459,10 @@
         .login-box .form-group{margin-bottom:12px;}
         .login-box label{display:block;margin-bottom:6px;font-weight:600;color:#4a5568;}
         .login-box input{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;}
+        .login-meta{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#6b7280;}
+        .captcha-row{display:flex;gap:8px;align-items:center;}
+        .captcha-row img{height:36px;border:1px solid #e5e7eb;border-radius:4px;background:#fff;}
+        .captcha-row button{white-space:nowrap;}
     </style>
 </head>
 <body>
@@ -473,6 +477,15 @@
                 <div class="form-group">
                     <label>密码</label>
                     <input name="password" type="password" placeholder="123456" required>
+                </div>
+                <div class="form-group">
+                    <label>验证码</label>
+                    <div class="captcha-row">
+                        <input name="captcha" type="text" placeholder="请输入验证码" required>
+                        <img id="captcha-img" alt="验证码" />
+                        <button type="button" class="btn btn-secondary" id="captcha-refresh">换一张</button>
+                    </div>
+                    <div class="login-meta">密码将使用加密算法校验</div>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">登录</button>
@@ -1767,14 +1780,35 @@
         const appPage = document.getElementById('app-page');
         const loginForm = document.getElementById('login-form');
         const loginError = document.getElementById('login-error');
+        const captchaImg = document.getElementById('captcha-img');
+        const captchaRefreshBtn = document.getElementById('captcha-refresh');
         const userNameEl = document.querySelector('.user-name');
         const userRoleEl = document.querySelector('.user-role');
         const userAreaEl = document.getElementById('user-area');
+        let captchaToken = '';
 
-        async function doLogin(username, password){
+        async function refreshCaptcha(){
+            try{
+                const r = await fetch(API_BASE + '/api/auth/captcha', {cache:'no-store'});
+                if(!r.ok) throw new Error('captcha failed');
+                const data = await r.json();
+                captchaToken = data.token || '';
+                if (captchaImg && data.image){
+                    captchaImg.src = 'data:image/png;base64,' + data.image;
+                }
+            }catch(err){
+                captchaToken = '';
+                if (captchaImg){
+                    captchaImg.removeAttribute('src');
+                    captchaImg.alt = '验证码加载失败';
+                }
+            }
+        }
+
+        async function doLogin(username, password, captchaCode){
             loginError.textContent = '';
             try{
-                const r = await fetch(API_BASE + '/api/auth/login', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({username, password})});
+                const r = await fetch(API_BASE + '/api/auth/login', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({username, password, captchaToken, captchaCode})});
                 if(!r.ok){
                     const msg = await r.text();
                     throw new Error(msg || '登录失败');
@@ -1791,13 +1825,17 @@
                 loadMapData();
             }catch(err){
                 loginError.textContent = '登录失败，请检查账号或密码';
+                refreshCaptcha();
             }
         }
 
         loginForm.addEventListener('submit', (e)=>{
             e.preventDefault();
-            doLogin(loginForm.username.value, loginForm.password.value);
+            doLogin(loginForm.username.value, loginForm.password.value, loginForm.captcha.value);
         });
+
+        captchaRefreshBtn?.addEventListener('click', refreshCaptcha);
+        refreshCaptcha();
 
         // 持久化登录状态
         const savedToken = localStorage.getItem('token');
