@@ -5,8 +5,9 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 
 ### 核心功能
 
+
 - **1. 首页看板（地图 + 村民信息）**
-	- 地图优先从数据库读取，空时回退在线地图。
+	- 地图优先从项目主目录 `地图.svg` 读取，失败时回退到数据库 SVG。
 	- 支持缩放、拖动、分层显示（边界 / 区域名称 / 村民信息）。
 	- 管理员可在地图上新增村民点，并支持编辑与删除，数据入库。
 
@@ -65,7 +66,7 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 ├─ stop-local.bat                          # 停止后端+MySQL
 ├─ start-backend.bat                       # 仅启动后端
 ├─ start-frontend.bat                      # 启动前端静态服务
-├─ 雨湖区.geojson                          # 示例地图数据
+├─ 地图.svg                                # 主目录地图（SVG）
 └─ README.md                               # 项目说明
 ```
 
@@ -81,7 +82,7 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 - 用户：`GET /api/users`、`POST /api/users`、`PUT /api/users/{id}`
 - 收支：`GET /api/finance/transactions`、`POST /api/finance/transactions`
 - 预警：`GET /api/warnings/events`、`POST /api/warnings/rules`
-- 地图：`GET /api/map`
+- 地图：`GET /api/map`（SVG）
 - 村民：`GET /api/residents`、`POST /api/residents`、`PUT /api/residents/{id}`、`DELETE /api/residents/{id}`
 - 运维：`/api/ops/monitor`、`/api/ops/health`、`/api/ops/logs`、`/api/ops/backups`、`/api/ops/restores`、`/api/ops/audit`
 
@@ -118,10 +119,11 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 ### 离线包运行流程
 1. 解压 dist/countryside-offline.zip。
 2. 双击 start-local.bat 启动后端与 MySQL。
-3. 打开 frontend/index.html 使用系统。
+3. 打开 frontend/index.html 使用系统（会自动加载主目录 `地图.svg`）。
 #### 前端使用方式
 - 直接打开 `frontend\index.html`。
 - 或运行 `start-frontend.bat`（会启动本地静态服务并自动打开页面）。
+- 前端默认加载主目录 `地图.svg`；如需从数据库加载，请使用 `db-editor.html` 保存 SVG。
 - 后端默认地址为 `http://localhost:8080`。
 
 #### 本地开发（可选）
