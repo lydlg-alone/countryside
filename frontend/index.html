@@ -460,6 +460,9 @@
         .login-box label{display:block;margin-bottom:6px;font-weight:600;color:#4a5568;}
         .login-box input{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;}
         .login-meta{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#6b7280;}
+        .captcha-row{display:flex;gap:8px;align-items:center;}
+        .captcha-row img{height:36px;border:1px solid #e5e7eb;border-radius:4px;background:#fff;}
+        .captcha-row button{white-space:nowrap;}
     </style>
 </head>
 <body>
@@ -475,7 +478,15 @@
                     <label>密码</label>
                     <input name="password" type="password" placeholder="123456" required>
                 </div>
-                <div class="login-meta" style="margin:6px 0 2px;">密码将使用加密算法校验</div>
+                <div class="form-group">
+                    <label>验证码</label>
+                    <div class="captcha-row">
+                        <input name="captcha" type="text" placeholder="请输入验证码" required>
+                        <img id="captcha-img" alt="验证码" />
+                        <button type="button" class="btn btn-secondary" id="captcha-refresh">换一张</button>
+                    </div>
+                    <div class="login-meta">密码将使用加密算法校验</div>
+                </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">登录</button>
                 </div>
@@ -645,7 +656,29 @@
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="dashboard-events"></tbody>
+                        <tbody>
+                            <tr>
+                                <td>2024-01-29 14:30</td>
+                                <td>预警信息</td>
+                                <td>后山区域温度异常升高</td>
+                                <td><span class="status-badge status-warning">待处理</span></td>
+                                <td><button class="btn btn-primary">查看</button></td>
+                            </tr>
+                            <tr>
+                                <td>2024-01-29 13:45</td>
+                                <td>村民反馈</td>
+                                <td>道路损坏需要维修</td>
+                                <td><span class="status-badge status-pending">处理中</span></td>
+                                <td><button class="btn btn-primary">处理</button></td>
+                            </tr>
+                            <tr>
+                                <td>2024-01-29 10:20</td>
+                                <td>任务完成</td>
+                                <td>春季植树活动已完成</td>
+                                <td><span class="status-badge status-completed">已完成</span></td>
+                                <td><button class="btn btn-secondary">详情</button></td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
                 
@@ -1369,9 +1402,8 @@
         </div>
     </div>
 
-    <script src="./config.js"></script>
     <script>
-        const API_BASE = (window.API_BASE ?? '');
+        const API_BASE = 'http://localhost:8080';
 
         // 导航项点击效果
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -1393,7 +1425,6 @@
                 document.getElementById(moduleId).classList.add('active');
                 if (moduleId === 'home') {
                     loadMapData();
-                    loadDashboardEvents();
                 }
             });
         });
@@ -1697,72 +1728,6 @@
             setMapScale(1);
         });
 
-        function statusBadge(status){
-            const text = status || '未知';
-            let cls = 'status-pending';
-            if (text.includes('完成') || text.includes('已完成') || text.includes('成功')) cls = 'status-completed';
-            if (text.includes('待处理') || text.includes('异常') || text.includes('高')) cls = 'status-warning';
-            return `<span class="status-badge ${cls}">${text}</span>`;
-        }
-
-        async function loadDashboardEvents(){
-            const body = document.getElementById('dashboard-events');
-            if (!body) return;
-            body.innerHTML = '';
-            const rows = [];
-            try{
-                const [warningsRes, feedbackRes, tasksRes] = await Promise.all([
-                    fetch(API_BASE + '/api/warnings/events', {cache:'no-store'}).catch(()=>null),
-                    fetch(API_BASE + '/api/feedback/items', {cache:'no-store'}).catch(()=>null),
-                    fetch(API_BASE + '/api/gov/tasks', {cache:'no-store'}).catch(()=>null)
-                ]);
-                if (warningsRes && warningsRes.ok){
-                    const list = await warningsRes.json();
-                    (list || []).forEach(w => {
-                        rows.push({
-                            time: w.triggered_at || '',
-                            type: '预警信息',
-                            desc: w.msg || w.title || '',
-                            status: w.status || '待处理',
-                            action: '查看'
-                        });
-                    });
-                }
-                if (feedbackRes && feedbackRes.ok){
-                    const list = await feedbackRes.json();
-                    (list || []).forEach(f => {
-                        rows.push({
-                            time: f.created_at || '',
-                            type: '村民反馈',
-                            desc: f.title || f.content || '',
-                            status: f.status || '处理中',
-                            action: '处理'
-                        });
-                    });
-                }
-                if (tasksRes && tasksRes.ok){
-                    const list = await tasksRes.json();
-                    (list || []).forEach(t => {
-                        rows.push({
-                            time: t.created_at || t.due_at || '',
-                            type: '任务',
-                            desc: t.title || t.description || '',
-                            status: t.status || '待处理',
-                            action: '详情'
-                        });
-                    });
-                }
-            }catch(err){
-                // ignore and show empty table
-            }
-            rows.sort((a,b)=> String(b.time).localeCompare(String(a.time)));
-            rows.slice(0, 10).forEach(r => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${r.time || ''}</td><td>${r.type}</td><td>${r.desc}</td><td>${statusBadge(r.status)}</td><td><button class="btn btn-secondary">${r.action}</button></td>`;
-                body.appendChild(tr);
-            });
-        }
-
         if(mapCanvas){
             mapCanvas.addEventListener('wheel', (e)=>{
                 e.preventDefault();
@@ -1815,45 +1780,38 @@
         const appPage = document.getElementById('app-page');
         const loginForm = document.getElementById('login-form');
         const loginError = document.getElementById('login-error');
+        const captchaImg = document.getElementById('captcha-img');
+        const captchaRefreshBtn = document.getElementById('captcha-refresh');
         const userNameEl = document.querySelector('.user-name');
         const userRoleEl = document.querySelector('.user-role');
         const userAreaEl = document.getElementById('user-area');
+        let captchaToken = '';
 
-        async function fetchWithTimeout(url, options = {}, timeoutMs = 8000){
-            const controller = new AbortController();
-            const tid = setTimeout(() => controller.abort(), timeoutMs);
+        async function refreshCaptcha(){
             try{
-                return await fetch(url, {...options, signal: controller.signal});
-            }finally{
-                clearTimeout(tid);
-            }
-        }
-
-        async function refreshCurrentUser(){
-            const username = localStorage.getItem('userUsername');
-            if (!username) return;
-            try{
-                const r = await fetch(API_BASE + '/api/users', {cache:'no-store'});
-                if (!r.ok) return;
-                const list = await r.json();
-                const user = (list || []).find(u => u.username === username);
-                if (!user) return;
-                localStorage.setItem('userName', user.name || username);
-                localStorage.setItem('userRole', user.role || '');
-                userNameEl.textContent = user.name || username;
-                userRoleEl.textContent = user.role || '';
+                const r = await fetch(API_BASE + '/api/auth/captcha', {cache:'no-store'});
+                if(!r.ok) throw new Error('captcha failed');
+                const data = await r.json();
+                captchaToken = data.token || '';
+                if (captchaImg && data.image){
+                    captchaImg.src = 'data:image/png;base64,' + data.image;
+                }
             }catch(err){
-                // ignore refresh failure
+                captchaToken = '';
+                if (captchaImg){
+                    captchaImg.removeAttribute('src');
+                    captchaImg.alt = '验证码加载失败';
+                }
             }
         }
 
-        async function doLogin(username, password){
+        async function doLogin(username, password, captchaCode){
             loginError.textContent = '';
             try{
-                const r = await fetchWithTimeout(API_BASE + '/api/auth/login', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({username, password})}, 8000);
+                const r = await fetch(API_BASE + '/api/auth/login', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({username, password, captchaToken, captchaCode})});
                 if(!r.ok){
                     const msg = await r.text();
-                    throw new Error((msg && msg.trim()) ? msg : ('登录失败（HTTP '+r.status+'）'));
+                    throw new Error(msg || '登录失败');
                 }
                 const data = await r.json();
                 localStorage.setItem('token', data.token || '');
@@ -1865,20 +1823,19 @@
                 loginPage.style.display = 'none';
                 appPage.style.display = 'flex';
                 loadMapData();
-                loadDashboardEvents();
-                refreshCurrentUser();
             }catch(err){
-                const message = (err && err.name === 'AbortError')
-                    ? '登录请求超时：请确认后端与 MySQL 已启动（运行 start-local.bat）'
-                    : (err?.message || '登录失败');
-                loginError.textContent = message;
+                loginError.textContent = '登录失败，请检查账号或密码';
+                refreshCaptcha();
             }
         }
 
         loginForm.addEventListener('submit', (e)=>{
             e.preventDefault();
-            doLogin(loginForm.username.value, loginForm.password.value);
+            doLogin(loginForm.username.value, loginForm.password.value, loginForm.captcha.value);
         });
+
+        captchaRefreshBtn?.addEventListener('click', refreshCaptcha);
+        refreshCaptcha();
 
         // 持久化登录状态
         const savedToken = localStorage.getItem('token');
@@ -1891,8 +1848,6 @@
             loginPage.style.display = 'none';
             appPage.style.display = 'flex';
             loadMapData();
-            loadDashboardEvents();
-            refreshCurrentUser();
         }else{
             loginPage.style.display = 'flex';
             appPage.style.display = 'none';
@@ -2121,6 +2076,7 @@
                     <div class="sub-panel-section">
                         <h4>${title}</h4>
                         <form class="task-form" id="login-settings-form">
+                            <div class="form-group"><label><input type="checkbox" name="captcha" checked> 启用登录验证码</label></div>
                             <div class="form-group"><label><input type="checkbox" name="mfa"> 启用双因子认证</label></div>
                             <div class="form-group"><label><input type="checkbox" name="lock"> 连续失败自动锁定</label></div>
                             <div class="form-group"><label>最大失败次数</label><input name="maxFail" type="number" value="5" min="1" max="10"></div>
@@ -3269,6 +3225,7 @@
                     resetBtn.dataset.bound = '1';
                     resetBtn.addEventListener('click', ()=>{
                         if(!form) return;
+                        form.captcha.checked = true;
                         form.mfa.checked = false;
                         form.lock.checked = false;
                         form.maxFail.value = 5;

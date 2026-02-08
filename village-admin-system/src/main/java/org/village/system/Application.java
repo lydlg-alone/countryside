@@ -143,10 +143,7 @@ public class Application {
     // DataSource init
     private static void initializeDataSource() throws Exception {
         com.mysql.cj.jdbc.MysqlDataSource ds = new com.mysql.cj.jdbc.MysqlDataSource();
-        String url = String.format(
-                "jdbc:mysql://%s:%s/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=2000&socketTimeout=5000",
-                DB_HOST, DB_PORT, DB_NAME
-        );
+        String url = String.format("jdbc:mysql://%s:%s/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC", DB_HOST, DB_PORT, DB_NAME);
         ds.setURL(url);
         ds.setUser(DB_USER);
         ds.setPassword(DB_PASS);
@@ -403,14 +400,12 @@ public class Application {
             String role = extractJsonString(body, "role");
             String username = extractJsonString(body, "username");
             String password = extractJsonString(body, "password");
-            String plainFlag = extractJsonString(body, "plainPassword");
-            boolean usePlain = isTrue(plainFlag);
-            String passwordValue = password == null ? null : (usePlain ? password : hashPassword(password));
+            String passwordHash = password == null ? null : hashPassword(password);
             try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO users (name,role,username,password) VALUES (?,?,?,?)", java.sql.Statement.RETURN_GENERATED_KEYS)){
                 ps.setString(1, name==null?"用户":name);
                 ps.setString(2, role==null?"普通用户":role);
                 ps.setString(3, username);
-                ps.setString(4, passwordValue);
+                ps.setString(4, passwordHash);
                 ps.executeUpdate();
                 java.sql.ResultSet g = ps.getGeneratedKeys(); int id = -1; if (g.next()) id = g.getInt(1);
                 writeJson(ex,201,"{\"id\":"+id+",\"name\":\""+escape(name==null?"用户":name)+"\",\"role\":\""+escape(role==null?"普通用户":role)+"\"}");
@@ -439,19 +434,12 @@ public class Application {
         if ("PUT".equals(method)){
             if (found==null) { writeText(ex,404,"not found"); return; }
             String body = readBody(ex);
-            String name = extractJsonString(body, "name");
-            String role = extractJsonString(body, "role");
-            String username = extractJsonString(body, "username");
-            String password = extractJsonString(body, "password");
-            String plainFlag = extractJsonString(body, "plainPassword");
-            boolean usePlain = isTrue(plainFlag);
-            String passwordValue = (password == null || password.isEmpty()) ? null : (usePlain ? password : hashPassword(password));
-            try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("UPDATE users SET name=?,role=?,username=COALESCE(?,username),password=COALESCE(?,password) WHERE id=?")){
+            String name = extractJsonField(body, "name");
+            String role = extractJsonField(body, "role");
+            try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("UPDATE users SET name=?,role=? WHERE id=?")){
                 ps.setString(1, name==null?found.get("name").toString():name);
                 ps.setString(2, role==null?found.get("role").toString():role);
-                ps.setString(3, username);
-                ps.setString(4, passwordValue);
-                ps.setInt(5, id);
+                ps.setInt(3, id);
                 ps.executeUpdate();
                 writeJson(ex,200,"{\"ok\":true}"); return;
             } catch(Exception exx){ writeText(ex,500,"db error: "+exx.getMessage()); return; }
@@ -1356,8 +1344,11 @@ public class Application {
         String body = readBody(ex);
         String username = extractJsonString(body,"username");
         String password = extractJsonString(body,"password");
+        String captchaToken = extractJsonString(body,"captchaToken");
+        String captchaCode = extractJsonString(body,"captchaCode");
         if (username==null || username.isEmpty()) { writeJson(ex,400,"{\"error\":\"username required\"}"); return; }
         if (password==null || password.isEmpty()) { writeJson(ex,400,"{\"error\":\"password required\"}"); return; }
+        if (!verifyCaptcha(captchaToken, captchaCode)) { writeJson(ex,401,"{\"error\":\"captcha invalid\"}"); return; }
         try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,role,username,password FROM users WHERE username=? LIMIT 1")){
             ps.setString(1, username);
             java.sql.ResultSet rs = ps.executeQuery();
@@ -2152,12 +2143,6 @@ public class Application {
             sb.append(alphabet.charAt(SECURE_RANDOM.nextInt(alphabet.length())));
         }
         return sb.toString();
-    }
-
-    private static boolean isTrue(String value){
-        if (value == null) return false;
-        String v = value.trim().toLowerCase();
-        return v.equals("1") || v.equals("true") || v.equals("yes") || v.equals("y");
     }
 
     private static boolean verifyCaptcha(String token, String code){

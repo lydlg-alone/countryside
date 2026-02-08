@@ -28,3 +28,7 @@ Connected to MySQL: jdbc:mysql://127.0.0.1:3306/village_db?useSSL=false&allowPub
 Village 管理系统 已启动，监听端口 8080
 Connected to MySQL: jdbc:mysql://127.0.0.1:3306/village_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 Village 管理系统 已启动，监听端口 8080
+Connected to MySQL: jdbc:mysql://127.0.0.1:3306/village_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=2000&socketTimeout=5000
+Village 管理系统 已启动，监听端口 8080
+Connected to MySQL: jdbc:mysql://127.0.0.1:3306/village_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=2000&socketTimeout=5000
+Village 管理系统 已启动，监听端口 8080

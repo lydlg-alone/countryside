@@ -14,7 +14,7 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 - **2. 用户与权限管理**
 	- 用户新增、编辑、删除与登录。
 	- 角色与权限信息展示。
-- 登录支持密码加密存储。
+	- 登录支持验证码校验与密码加密存储。
 
 - **3. 财务与收支管理**
 	- 收支记录新增、列表、审核与统计。
@@ -79,6 +79,7 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 
 ### 接口设计（REST 风格，JSON）
 - 登录：`POST /api/auth/login`
+- 验证码：`GET /api/auth/captcha`
 - 用户：`GET /api/users`、`POST /api/users`、`PUT /api/users/{id}`
 - 收支：`GET /api/finance/transactions`、`POST /api/finance/transactions`
 - 预警：`GET /api/warnings/events`、`POST /api/warnings/rules`
@@ -98,13 +99,6 @@ Village 管理系统是面向村级治理与服务的轻量化管理平台，提
 3. 运行项目根目录 `start-local.bat`（会同时启动 MySQL + 后端，窗口保持不退出）。
 
 停止服务：运行 `stop-local.bat`。
-
-#### 默认管理员账号
-- 用户名：`admin`
-- 密码：`123456`
-
-如需重置管理员密码（本地 MySQL 已启动后执行）：
-- 运行根目录脚本：`reset-admin-password.bat`
 
 ## Windows 离线包说明
 

@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const modulesEl = document.getElementById('modules');
   const moduleContent = document.getElementById('moduleContent');
   const mainTitle = document.getElementById('mainTitle');
-  const API_BASE = (window.API_BASE ?? 'http://localhost:8080');
+  const API_BASE = 'http://localhost:8080';
   let currentModule = null;
 
   function activeContainer(){
