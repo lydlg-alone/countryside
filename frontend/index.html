@@ -1819,6 +1819,16 @@
         const userRoleEl = document.querySelector('.user-role');
         const userAreaEl = document.getElementById('user-area');
 
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 8000){
+            const controller = new AbortController();
+            const tid = setTimeout(() => controller.abort(), timeoutMs);
+            try{
+                return await fetch(url, {...options, signal: controller.signal});
+            }finally{
+                clearTimeout(tid);
+            }
+        }
+
         async function refreshCurrentUser(){
             const username = localStorage.getItem('userUsername');
             if (!username) return;
@@ -1840,10 +1850,10 @@
         async function doLogin(username, password){
             loginError.textContent = '';
             try{
-                const r = await fetch(API_BASE + '/api/auth/login', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({username, password})});
+                const r = await fetchWithTimeout(API_BASE + '/api/auth/login', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({username, password})}, 8000);
                 if(!r.ok){
                     const msg = await r.text();
-                    throw new Error(msg || '登录失败');
+                    throw new Error((msg && msg.trim()) ? msg : ('登录失败（HTTP '+r.status+'）'));
                 }
                 const data = await r.json();
                 localStorage.setItem('token', data.token || '');
@@ -1858,7 +1868,10 @@
                 loadDashboardEvents();
                 refreshCurrentUser();
             }catch(err){
-                loginError.textContent = '登录失败，请检查账号或密码';
+                const message = (err && err.name === 'AbortError')
+                    ? '登录请求超时：请确认后端与 MySQL 已启动（运行 start-local.bat）'
+                    : (err?.message || '登录失败');
+                loginError.textContent = message;
             }
         }
 

@@ -143,7 +143,10 @@ public class Application {
     // DataSource init
     private static void initializeDataSource() throws Exception {
         com.mysql.cj.jdbc.MysqlDataSource ds = new com.mysql.cj.jdbc.MysqlDataSource();
-        String url = String.format("jdbc:mysql://%s:%s/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC", DB_HOST, DB_PORT, DB_NAME);
+        String url = String.format(
+                "jdbc:mysql://%s:%s/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=2000&socketTimeout=5000",
+                DB_HOST, DB_PORT, DB_NAME
+        );
         ds.setURL(url);
         ds.setUser(DB_USER);
         ds.setPassword(DB_PASS);
