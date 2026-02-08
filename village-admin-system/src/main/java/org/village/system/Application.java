@@ -6,15 +6,26 @@ import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Base64;
+import java.util.concurrent.ConcurrentHashMap;
+import java.security.SecureRandom;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import de.mkammerer.argon2.Argon2;
+import de.mkammerer.argon2.Argon2Factory;
 
 public class Application {
     // persistence config (environment or defaults)
@@ -32,6 +43,18 @@ public class Application {
 
     private static javax.sql.DataSource dataSource = null;
     private static volatile boolean tablesEnsured = false;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final int CAPTCHA_EXPIRES_SECONDS = 120;
+    private static final Map<String, CaptchaEntry> CAPTCHA_STORE = new ConcurrentHashMap<>();
+    private static final int ARGON2_ITERATIONS = 3;
+    private static final int ARGON2_MEMORY_KB = 65536;
+    private static final int ARGON2_PARALLELISM = 1;
+
+    private static class CaptchaEntry {
+        final String code;
+        final long expiresAt;
+        CaptchaEntry(String code, long expiresAt){ this.code = code; this.expiresAt = expiresAt; }
+    }
 
     static {
         try {
@@ -67,6 +90,7 @@ public class Application {
         server.createContext("/api/warnings/logs", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleWarningLogs(exchange); });
         server.createContext("/api/warnings/stats", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleWarningStats(exchange); });
         server.createContext("/api/auth/login", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleLogin(exchange); });
+        server.createContext("/api/auth/captcha", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleCaptcha(exchange); });
         server.createContext("/api/auth/password", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handlePasswordChange(exchange); });
         server.createContext("/api/industry/metrics", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleIndustryMetrics(exchange); });
         server.createContext("/api/industry/metrics/", exchange -> { if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){ addCorsHeaders(exchange); exchange.sendResponseHeaders(204, -1); return; } handleIndustryMetricById(exchange); });
@@ -147,7 +171,7 @@ public class Application {
         String w = "CREATE TABLE IF NOT EXISTS warnings (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), msg TEXT, severity VARCHAR(50), status VARCHAR(50), assignee VARCHAR(64), handler VARCHAR(64), notify_status VARCHAR(32), handled_at VARCHAR(64), triggered_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String wl = "CREATE TABLE IF NOT EXISTS warning_logs (id INT AUTO_INCREMENT PRIMARY KEY, warning_id INT, action VARCHAR(64), actor VARCHAR(64), note VARCHAR(255), created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String im = "CREATE TABLE IF NOT EXISTS industry_metrics (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), value_num INT, unit VARCHAR(32), updated_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-        String md = "CREATE TABLE IF NOT EXISTS map_data (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), content LONGTEXT, created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        String md = "CREATE TABLE IF NOT EXISTS map_data (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), content LONGTEXT, map_type VARCHAR(16), created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String rs = "CREATE TABLE IF NOT EXISTS residents (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), address VARCHAR(255), phone VARCHAR(64), x_num INT, y_num INT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String ai = "CREATE TABLE IF NOT EXISTS ai_records (id INT AUTO_INCREMENT PRIMARY KEY, type VARCHAR(32), question TEXT, answer TEXT, created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String oa = "CREATE TABLE IF NOT EXISTS ops_audit (id INT AUTO_INCREMENT PRIMARY KEY, action_desc VARCHAR(255), actor VARCHAR(64), status VARCHAR(32), created_at VARCHAR(64)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
@@ -185,6 +209,7 @@ public class Application {
             try { s.execute("ALTER TABLE warnings ADD COLUMN handler VARCHAR(64)"); } catch (Exception ignored) {}
             try { s.execute("ALTER TABLE warnings ADD COLUMN notify_status VARCHAR(32)"); } catch (Exception ignored) {}
             try { s.execute("ALTER TABLE warnings ADD COLUMN handled_at VARCHAR(64)"); } catch (Exception ignored) {}
+            try { s.execute("ALTER TABLE map_data ADD COLUMN map_type VARCHAR(16)"); } catch (Exception ignored) {}
         }
     }
 
@@ -204,12 +229,12 @@ public class Application {
         return dataSource.getConnection();
     }
 
-    private static String loadGeoJsonFromFile(){
+    private static String loadSvgFromFile(){
         String[] candidates = new String[]{
-                "雨湖区.geojson",
-                Paths.get(System.getProperty("user.dir"), "雨湖区.geojson").toString(),
-                Paths.get(System.getProperty("user.dir"), "..", "雨湖区.geojson").toString(),
-                Paths.get(System.getProperty("user.dir"), "..", "..", "雨湖区.geojson").toString()
+                "地图.svg",
+                Paths.get(System.getProperty("user.dir"), "地图.svg").toString(),
+                Paths.get(System.getProperty("user.dir"), "..", "地图.svg").toString(),
+                Paths.get(System.getProperty("user.dir"), "..", "..", "地图.svg").toString()
         };
         for (String p : candidates){
             try {
@@ -242,6 +267,7 @@ public class Application {
 
     private static void ensureSampleMapData(java.sql.Connection c){
         try {
+<<<<<<< HEAD
             String sampleGeo = loadGeoJsonFromFile();
             if (sampleGeo != null && !sampleGeo.trim().isEmpty()){
                 try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
@@ -262,9 +288,25 @@ public class Application {
                             ins.setString(3, java.time.Instant.now().toString());
                             ins.executeUpdate();
                         }
+=======
+            String sampleSvg = loadSvgFromFile();
+            if (sampleSvg == null || sampleSvg.trim().isEmpty()) return;
+            try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
+                ps.setString(1, "主目录地图");
+                java.sql.ResultSet rs = ps.executeQuery();
+                if (rs.next()){
+                    int id = rs.getInt("id");
+                    try (java.sql.PreparedStatement ups = c.prepareStatement("UPDATE map_data SET content=?, map_type=?, created_at=? WHERE id=?")){
+                        ups.setString(1, sampleSvg);
+                        ups.setString(2, "svg");
+                        ups.setString(3, java.time.Instant.now().toString());
+                        ups.setInt(4, id);
+                        ups.executeUpdate();
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
                     }
                 }
             }
+<<<<<<< HEAD
 
             String sampleSvg = loadSvgFromFile();
             if (sampleSvg != null && !sampleSvg.trim().isEmpty()){
@@ -288,6 +330,14 @@ public class Application {
                         }
                     }
                 }
+=======
+            try (java.sql.PreparedStatement ins = c.prepareStatement("INSERT INTO map_data (name,content,map_type,created_at) VALUES (?,?,?,?)")){
+                ins.setString(1, "主目录地图");
+                ins.setString(2, sampleSvg);
+                ins.setString(3, "svg");
+                ins.setString(4, java.time.Instant.now().toString());
+                ins.executeUpdate();
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
             }
         } catch (Exception ignored) {
         }
@@ -312,6 +362,7 @@ public class Application {
             }
             rs = s.executeQuery("SELECT COUNT(*) FROM map_data"); rs.next();
             int mapCount = rs.getInt(1);
+<<<<<<< HEAD
             String sampleGeo = loadGeoJsonFromFile();
             String sampleSvg = loadSvgFromFile();
             if (mapCount == 0){
@@ -321,15 +372,26 @@ public class Application {
                     else ps.setString(1, sampleGeo != null ? "雨湖区示例地图" : "默认村落地图");
                     ps.setString(2, content);
                     ps.setString(3, java.time.Instant.now().toString());
+=======
+            String sampleSvg = loadSvgFromFile();
+            if (mapCount == 0){
+                String svg = sampleSvg != null ? sampleSvg : "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1000 600\"><rect x=\"0\" y=\"0\" width=\"1000\" height=\"600\" fill=\"#e2e8f0\" stroke=\"#94a3b8\" stroke-width=\"2\"/></svg>";
+                try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,map_type,created_at) VALUES (?,?,?,?)")){
+                    ps.setString(1, sampleSvg != null ? "主目录地图" : "默认村落地图");
+                    ps.setString(2, svg);
+                    ps.setString(3, "svg");
+                    ps.setString(4, java.time.Instant.now().toString());
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
                     ps.executeUpdate();
                 }
-            } else if (sampleGeo != null) {
-                rs = s.executeQuery("SELECT COUNT(*) FROM map_data WHERE name='雨湖区示例地图'"); rs.next();
+            } else if (sampleSvg != null) {
+                rs = s.executeQuery("SELECT COUNT(*) FROM map_data WHERE name='主目录地图'"); rs.next();
                 if (rs.getInt(1) == 0){
-                    try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
-                        ps.setString(1, "雨湖区示例地图");
-                        ps.setString(2, sampleGeo);
-                        ps.setString(3, java.time.Instant.now().toString());
+                    try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,map_type,created_at) VALUES (?,?,?,?)")){
+                        ps.setString(1, "主目录地图");
+                        ps.setString(2, sampleSvg);
+                        ps.setString(3, "svg");
+                        ps.setString(4, java.time.Instant.now().toString());
                         ps.executeUpdate();
                     }
                 }
@@ -434,15 +496,16 @@ public class Application {
 
         if ("POST".equals(method)){
             String body = readBody(ex);
-            String name = extractJsonField(body, "name");
-            String role = extractJsonField(body, "role");
-            String username = extractJsonField(body, "username");
-            String password = extractJsonField(body, "password");
+            String name = extractJsonString(body, "name");
+            String role = extractJsonString(body, "role");
+            String username = extractJsonString(body, "username");
+            String password = extractJsonString(body, "password");
+            String passwordHash = password == null ? null : hashPassword(password);
             try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO users (name,role,username,password) VALUES (?,?,?,?)", java.sql.Statement.RETURN_GENERATED_KEYS)){
                 ps.setString(1, name==null?"用户":name);
                 ps.setString(2, role==null?"普通用户":role);
                 ps.setString(3, username);
-                ps.setString(4, password);
+                ps.setString(4, passwordHash);
                 ps.executeUpdate();
                 java.sql.ResultSet g = ps.getGeneratedKeys(); int id = -1; if (g.next()) id = g.getInt(1);
                 writeJson(ex,201,"{\"id\":"+id+",\"name\":\""+escape(name==null?"用户":name)+"\",\"role\":\""+escape(role==null?"普通用户":role)+"\"}");
@@ -1400,17 +1463,35 @@ public class Application {
         ensureTablesSafe();
         if (!"POST".equals(ex.getRequestMethod())) { writeText(ex,405,"Method Not Allowed"); return; }
         String body = readBody(ex);
-        String username = extractJsonField(body,"username");
-        String password = extractJsonField(body,"password");
+        String username = extractJsonString(body,"username");
+        String password = extractJsonString(body,"password");
+        String captchaToken = extractJsonString(body,"captchaToken");
+        String captchaCode = extractJsonString(body,"captchaCode");
         if (username==null || username.isEmpty()) { writeJson(ex,400,"{\"error\":\"username required\"}"); return; }
         if (password==null || password.isEmpty()) { writeJson(ex,400,"{\"error\":\"password required\"}"); return; }
-        try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,role FROM users WHERE username=? AND password=? LIMIT 1")){
+        if (!verifyCaptcha(captchaToken, captchaCode)) { writeJson(ex,401,"{\"error\":\"captcha invalid\"}"); return; }
+        try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,role,username,password FROM users WHERE username=? LIMIT 1")){
             ps.setString(1, username);
-            ps.setString(2, password);
             java.sql.ResultSet rs = ps.executeQuery();
-            int id=-1; String name=null; String role=null;
-            if (rs.next()){ id = rs.getInt("id"); name = rs.getString("name"); role = rs.getString("role"); }
+            int id=-1; String name=null; String role=null; String storedPass=null;
+            if (rs.next()){
+                id = rs.getInt("id");
+                name = rs.getString("name");
+                role = rs.getString("role");
+                storedPass = rs.getString("password");
+            }
             if (id==-1){ writeJson(ex,401,"{\"error\":\"invalid credentials\"}"); return; }
+            if (!verifyPassword(password, storedPass)) { writeJson(ex,401,"{\"error\":\"invalid credentials\"}"); return; }
+            if (storedPass == null || !storedPass.startsWith("$argon2")) {
+                String newHash = hashPassword(password);
+                if (newHash != null){
+                    try (java.sql.PreparedStatement ups = c.prepareStatement("UPDATE users SET password=? WHERE id=?")){
+                        ups.setString(1, newHash);
+                        ups.setInt(2, id);
+                        ups.executeUpdate();
+                    }
+                }
+            }
             writeJson(ex,200,"{\"token\":\"mock-token-123\",\"user\":{\"id\":"+id+",\"name\":\""+escape(name==null?"user":name)+"\",\"role\":\""+escape(role==null?"":role)+"\",\"username\":\""+escape(username)+"\"}}"); return;
         } catch(Exception e){ writeText(ex,500,"db error: "+e.getMessage()); return; }
     }
@@ -1419,26 +1500,39 @@ public class Application {
         ensureTablesSafe();
         if (!"POST".equals(ex.getRequestMethod())) { writeText(ex,405,"Method Not Allowed"); return; }
         String body = readBody(ex);
-        String username = extractJsonField(body,"username");
-        String oldPassword = extractJsonField(body,"oldPassword");
-        String newPassword = extractJsonField(body,"newPassword");
+        String username = extractJsonString(body,"username");
+        String oldPassword = extractJsonString(body,"oldPassword");
+        String newPassword = extractJsonString(body,"newPassword");
         if (username==null || username.isEmpty()) { writeJson(ex,400,"{\"error\":\"username required\"}"); return; }
         if (oldPassword==null || oldPassword.isEmpty()) { writeJson(ex,400,"{\"error\":\"oldPassword required\"}"); return; }
         if (newPassword==null || newPassword.isEmpty()) { writeJson(ex,400,"{\"error\":\"newPassword required\"}"); return; }
         try (java.sql.Connection c = openConnection()){
-            try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id FROM users WHERE username=? AND password=? LIMIT 1")){
+            String storedPass = null;
+            try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT password FROM users WHERE username=? LIMIT 1")){
                 ps.setString(1, username);
-                ps.setString(2, oldPassword);
                 java.sql.ResultSet rs = ps.executeQuery();
                 if (!rs.next()){ writeJson(ex,401,"{\"error\":\"invalid credentials\"}"); return; }
+                storedPass = rs.getString("password");
             }
+            if (!verifyPassword(oldPassword, storedPass)) { writeJson(ex,401,"{\"error\":\"invalid credentials\"}"); return; }
+            String newHash = hashPassword(newPassword);
             try (java.sql.PreparedStatement ps = c.prepareStatement("UPDATE users SET password=? WHERE username=?")){
-                ps.setString(1, newPassword);
+                ps.setString(1, newHash);
                 ps.setString(2, username);
                 ps.executeUpdate();
                 writeJson(ex,200,"{\"ok\":true}"); return;
             }
         } catch(Exception e){ writeText(ex,500,"db error: "+e.getMessage()); return; }
+    }
+
+    private static void handleCaptcha(HttpExchange ex) throws IOException {
+        if (!"GET".equals(ex.getRequestMethod())) { writeText(ex,405,"Method Not Allowed"); return; }
+        String code = randomDigits(4);
+        String token = randomToken(24);
+        long expiresAt = System.currentTimeMillis() + CAPTCHA_EXPIRES_SECONDS * 1000L;
+        CAPTCHA_STORE.put(token, new CaptchaEntry(code, expiresAt));
+        String image = createCaptchaImageBase64(code);
+        writeJson(ex,200,"{\"token\":\""+escape(token)+"\",\"image\":\""+image+"\",\"expiresIn\":"+CAPTCHA_EXPIRES_SECONDS+"}");
     }
 
     private static String loadApiKey(String name) throws Exception {
@@ -1625,26 +1719,64 @@ public class Application {
         if ("GET".equals(method)){
             try (java.sql.Connection c = openConnection()){
                 ensureSampleMapData(c);
-                try (java.sql.Statement s = c.createStatement()){
-                    java.sql.ResultSet rs = s.executeQuery("SELECT id,name,content,created_at FROM map_data ORDER BY id DESC LIMIT 1");
+<<<<<<< HEAD
+=======
+                try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,content,map_type,created_at FROM map_data WHERE name=? ORDER BY id DESC LIMIT 1")){
+                    ps.setString(1, "主目录地图");
+                    java.sql.ResultSet rs = ps.executeQuery();
                     if (rs.next()){
                         String content = rs.getString("content");
-                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
+                        String type = rs.getString("map_type");
+                        if (type == null || type.trim().isEmpty()) type = "svg";
+                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"type\":\""+escape(type)+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
                         writeJson(ex,200,json); return;
                     }
                 }
-                writeJson(ex,200,"{\"id\":0,\"name\":\"\",\"content\":\"\"}");
+                try (java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,content,map_type,created_at FROM map_data WHERE map_type='svg' ORDER BY id DESC LIMIT 1")){
+                    java.sql.ResultSet rs = ps.executeQuery();
+                    if (rs.next()){
+                        String content = rs.getString("content");
+                        String type = rs.getString("map_type");
+                        if (type == null || type.trim().isEmpty()) type = "svg";
+                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"type\":\""+escape(type)+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
+                        writeJson(ex,200,json); return;
+                    }
+                }
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
+                try (java.sql.Statement s = c.createStatement()){
+                    java.sql.ResultSet rs = s.executeQuery("SELECT id,name,content,map_type,created_at FROM map_data ORDER BY id DESC LIMIT 1");
+                    if (rs.next()){
+                        String content = rs.getString("content");
+                        String type = rs.getString("map_type");
+                        if (type == null || type.trim().isEmpty()) type = "svg";
+                        String json = "{\"id\":"+rs.getInt("id")+",\"name\":\""+escape(rs.getString("name"))+"\",\"type\":\""+escape(type)+"\",\"content\":\""+escape(content)+"\",\"created_at\":\""+escape(rs.getString("created_at"))+"\"}";
+                        writeJson(ex,200,json); return;
+                    }
+                }
+                writeJson(ex,200,"{\"id\":0,\"name\":\"\",\"type\":\"svg\",\"content\":\"\"}");
                 return;
             } catch(Exception e){ writeText(ex,500,"db error: "+e.getMessage()); return; }
         }
         if ("POST".equals(method)){
+<<<<<<< HEAD
             java.util.Map<String, String> payload = parseJsonObjectToStrings(readBody(ex));
             String name = payload.get("name");
             String content = payload.get("content");
             try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,created_at) VALUES (?,?,?)")){
+=======
+            String body = readBody(ex);
+            String name = extractJsonString(body, "name");
+            String content = extractJsonString(body, "content");
+            String type = extractJsonString(body, "type");
+            if (type == null || type.trim().isEmpty()) {
+                type = "svg";
+            }
+            try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO map_data (name,content,map_type,created_at) VALUES (?,?,?,?)")){
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
                 ps.setString(1, name==null?"地图":name);
                 ps.setString(2, content==null?"{}":content);
-                ps.setString(3, java.time.Instant.now().toString());
+                ps.setString(3, type);
+                ps.setString(4, java.time.Instant.now().toString());
                 ps.executeUpdate();
                 writeJson(ex,200,"{\"ok\":true}"); return;
             } catch(Exception e){ writeText(ex,500,"db error: "+e.getMessage()); return; }
@@ -2558,6 +2690,133 @@ public class Application {
     private static String escape(String s){
         if (s == null) return "";
         return s.replace("\\","\\\\").replace("\"","\\\"").replace("\r","\\r").replace("\n","\\n").replace("\t","\\t");
+    }
+
+    private static String hashPassword(String password){
+        if (password == null || password.isEmpty()) return null;
+        Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
+        char[] pwd = password.toCharArray();
+        try {
+            return argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, pwd);
+        } finally {
+            argon2.wipeArray(pwd);
+        }
+    }
+
+    private static boolean verifyPassword(String password, String storedHash){
+        if (password == null || storedHash == null || storedHash.isEmpty()) return false;
+        if (!storedHash.startsWith("$argon2")) {
+            return storedHash.equals(password);
+        }
+        Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
+        char[] pwd = password.toCharArray();
+        try {
+            return argon2.verify(storedHash, pwd);
+        } finally {
+            argon2.wipeArray(pwd);
+        }
+    }
+
+    private static String randomDigits(int len){
+        StringBuilder sb = new StringBuilder();
+        for (int i=0;i<len;i++){
+            sb.append(SECURE_RANDOM.nextInt(10));
+        }
+        return sb.toString();
+    }
+
+    private static String randomToken(int len){
+        final String alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder sb = new StringBuilder();
+        for (int i=0;i<len;i++){
+            sb.append(alphabet.charAt(SECURE_RANDOM.nextInt(alphabet.length())));
+        }
+        return sb.toString();
+    }
+
+    private static boolean verifyCaptcha(String token, String code){
+        if (token == null || code == null) return false;
+        CaptchaEntry entry = CAPTCHA_STORE.remove(token);
+        if (entry == null) return false;
+        if (System.currentTimeMillis() > entry.expiresAt) return false;
+        return entry.code.equalsIgnoreCase(code.trim());
+    }
+
+    private static String createCaptchaImageBase64(String code){
+        int width = 120;
+        int height = 40;
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(245, 247, 251));
+        g.fillRect(0, 0, width, height);
+        g.setFont(new Font("Arial", Font.BOLD, 22));
+        g.setColor(new Color(37, 99, 235));
+        g.drawString(code, 18, 28);
+        g.setColor(new Color(148, 163, 184));
+        for (int i=0;i<4;i++){
+            int x1 = SECURE_RANDOM.nextInt(width);
+            int y1 = SECURE_RANDOM.nextInt(height);
+            int x2 = SECURE_RANDOM.nextInt(width);
+            int y2 = SECURE_RANDOM.nextInt(height);
+            g.drawLine(x1, y1, x2, y2);
+        }
+        g.dispose();
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()){
+            javax.imageio.ImageIO.write(img, "png", out);
+            return Base64.getEncoder().encodeToString(out.toByteArray());
+        } catch (Exception e){
+            return "";
+        }
+    }
+
+    private static String extractJsonString(String json, String key){
+        if (json == null || key == null) return null;
+        String needle = "\"" + key + "\"";
+        int idx = json.indexOf(needle);
+        if (idx < 0) return null;
+        idx = json.indexOf(':', idx + needle.length());
+        if (idx < 0) return null;
+        idx++;
+        while (idx < json.length() && Character.isWhitespace(json.charAt(idx))) idx++;
+        if (idx >= json.length() || json.charAt(idx) != '"') return null;
+        idx++;
+        StringBuilder sb = new StringBuilder();
+        boolean escaped = false;
+        for (; idx < json.length(); idx++){
+            char ch = json.charAt(idx);
+            if (escaped){
+                switch (ch){
+                    case '"': sb.append('"'); break;
+                    case '\\': sb.append('\\'); break;
+                    case '/': sb.append('/'); break;
+                    case 'b': sb.append('\b'); break;
+                    case 'f': sb.append('\f'); break;
+                    case 'n': sb.append('\n'); break;
+                    case 'r': sb.append('\r'); break;
+                    case 't': sb.append('\t'); break;
+                    case 'u':
+                        if (idx + 4 < json.length()){
+                            String hex = json.substring(idx + 1, idx + 5);
+                            try { sb.append((char) Integer.parseInt(hex, 16)); } catch (Exception ignored) {}
+                            idx += 4;
+                        }
+                        break;
+                    default: sb.append(ch); break;
+                }
+                escaped = false;
+                continue;
+            }
+            if (ch == '\\'){
+                escaped = true;
+                continue;
+            }
+            if (ch == '"'){
+                return sb.toString();
+            }
+            sb.append(ch);
+        }
+        return null;
     }
 
     private static String getQueryParam(HttpExchange ex, String key){

@@ -277,9 +277,48 @@
       .tables{height:auto; min-height:auto;}
       .main{height:auto; min-height:auto;}
     }
+<<<<<<< HEAD
+=======
+    button { cursor: pointer; background: var(--primary); color: #fff; border-color: var(--primary); }
+    button.secondary { background: #fff; color: var(--text); border-color: var(--border); }
+    button.danger { background: var(--danger); border-color: var(--danger); }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+    .tab { padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; background: #fff; }
+    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .panel { display: none; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .panel.active { display: block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: #f9fafb; }
+    .row-actions { display: flex; gap: 6px; }
+    .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .muted { color: var(--muted); font-size: 12px; }
+    .section-title { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+    .root-login { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .root-card { background: #fff; padding: 20px; border-radius: 10px; width: 320px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .root-card h3 { margin: 0 0 10px; font-size: 16px; }
+    .root-card input { width: 100%; }
+    .root-actions { margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end; }
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
   </style>
 </head>
 <body>
+  <div class="root-login" id="root-login">
+    <div class="root-card">
+      <h3>Root 验证</h3>
+      <div class="muted">请输入 root 码以进入工具</div>
+      <div style="margin-top:10px;">
+        <input id="rootCode" type="password" placeholder="root 码" />
+      </div>
+      <div class="root-actions">
+        <button class="secondary" id="root-cancel" type="button">关闭</button>
+        <button id="root-enter" type="button">进入</button>
+      </div>
+      <div class="muted" id="root-error" style="margin-top:8px;color:#dc2626;"></div>
+    </div>
+  </div>
+
+  <div id="app-root" style="display:none;">
   <header>
     <div class="header-inner">
       <div>
@@ -295,6 +334,7 @@
     </div>
   </header>
 
+<<<<<<< HEAD
   <div id="loginView" style="display:none; padding:24px;">
     <div class="card" style="max-width:420px; margin:40px auto;">
       <div class="card-header">
@@ -309,6 +349,21 @@
         </div>
         <div class="muted" id="rootLoginError" style="margin-top:10px; color:#dc2626;"></div>
       </div>
+=======
+  <div class="tabs" id="tabs"></div>
+
+  <section class="panel" id="panel-users">
+    <h3 class="section-title">用户管理</h3>
+    <div class="grid">
+      <input id="userName" placeholder="姓名" />
+      <select id="userRole">
+        <option value="管理员">管理员</option>
+        <option value="普通用户">普通用户</option>
+      </select>
+      <input id="userUsername" placeholder="用户名" />
+      <input id="userPassword" placeholder="密码" />
+      <button id="addUser">新增用户</button>
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
     </div>
   </div>
 
@@ -364,6 +419,7 @@
             </div>
           </div>
 
+<<<<<<< HEAD
           <div class="data">
             <table>
               <thead>
@@ -380,6 +436,50 @@
       </section>
     </main>
   </div>
+=======
+  <section class="panel" id="panel-map">
+    <h3 class="section-title">地图数据</h3>
+    <div class="grid">
+      <input id="mapName" placeholder="地图名称" />
+      <input id="mapSvgFile" type="file" accept="image/svg+xml,.svg,.SVG" />
+      <button class="secondary" id="importSvg">导入SVG</button>
+      <button class="secondary" id="loadMap">加载数据库地图</button>
+      <button id="saveMap">保存地图内容</button>
+    </div>
+    <textarea id="mapContent" rows="10" placeholder="SVG 内容"></textarea>
+    <div class="muted" id="mapMeta"></div>
+  </section>
+
+  <section class="panel" id="panel-residents">
+    <h3 class="section-title">村民信息点</h3>
+    <div class="grid">
+      <input id="residentName" placeholder="姓名" />
+      <input id="residentAddress" placeholder="地址" />
+      <input id="residentPhone" placeholder="电话" />
+      <input id="residentX" placeholder="X 坐标" />
+      <input id="residentY" placeholder="Y 坐标" />
+      <button id="addResident">新增村民点</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>姓名</th><th>地址</th><th>电话</th><th>X</th><th>Y</th><th>操作</th></tr></thead>
+      <tbody id="residentsBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-industry">
+    <h3 class="section-title">产业指标</h3>
+    <div class="grid">
+      <input id="metricName" placeholder="指标名称" />
+      <input id="metricValue" placeholder="数值" />
+      <input id="metricUnit" placeholder="单位" />
+      <button id="addMetric">新增指标</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>名称</th><th>数值</th><th>单位</th><th>更新时间</th><th>操作</th></tr></thead>
+      <tbody id="metricBody"></tbody>
+    </table>
+  </section>
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
 
   <div class="modal-backdrop" id="modal">
     <div class="modal">
@@ -399,9 +499,107 @@
     </div>
   </div>
 
+<<<<<<< HEAD
   <div class="toast" id="toast"></div>
+=======
+  <section class="panel" id="panel-ops-monitor">
+    <h3 class="section-title">运维监控</h3>
+    <div class="grid">
+      <input id="opsMetric" placeholder="指标名称" />
+      <input id="opsValue" placeholder="指标值" />
+      <input id="opsStatus" placeholder="状态" />
+      <button id="addOpsMetric">新增指标</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>指标</th><th>数值</th><th>状态</th><th>时间</th></tr></thead>
+      <tbody id="opsMonitorBody"></tbody>
+    </table>
+  </section>
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
+
+  <section class="panel" id="panel-ops-health">
+    <h3 class="section-title">健康检查</h3>
+    <div class="grid">
+      <input id="opsService" placeholder="服务名称" />
+      <input id="opsHealthStatus" placeholder="状态" />
+      <input id="opsDetail" placeholder="详情" />
+      <button id="addOpsHealth">记录检查</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>服务</th><th>状态</th><th>详情</th><th>时间</th></tr></thead>
+      <tbody id="opsHealthBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-logs">
+    <h3 class="section-title">日志中心</h3>
+    <div class="grid">
+      <input id="opsLogLevel" placeholder="级别" />
+      <input id="opsLogSource" placeholder="来源" />
+      <input id="opsLogMessage" placeholder="内容" />
+      <button id="addOpsLog">记录日志</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>级别</th><th>来源</th><th>内容</th><th>时间</th></tr></thead>
+      <tbody id="opsLogsBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-log-report">
+    <h3 class="section-title">日志分析报告</h3>
+    <table>
+      <thead><tr><th>级别</th><th>数量</th></tr></thead>
+      <tbody id="opsLogReportBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-backups">
+    <h3 class="section-title">备份任务</h3>
+    <div class="grid">
+      <input id="opsBackupTarget" placeholder="备份对象" />
+      <input id="opsBackupType" placeholder="类型" />
+      <input id="opsBackupOperator" placeholder="执行人" />
+      <button id="addOpsBackup">创建备份</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>对象</th><th>类型</th><th>状态</th><th>执行人</th><th>开始时间</th><th>完成时间</th></tr></thead>
+      <tbody id="opsBackupsBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-restores">
+    <h3 class="section-title">恢复操作</h3>
+    <div class="grid">
+      <input id="opsRestoreBackupId" placeholder="备份ID" />
+      <input id="opsRestoreOperator" placeholder="执行人" />
+      <button id="addOpsRestore">执行恢复</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>备份ID</th><th>状态</th><th>执行人</th><th>开始时间</th><th>完成时间</th></tr></thead>
+      <tbody id="opsRestoresBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-audit">
+    <h3 class="section-title">审计查询</h3>
+    <table>
+      <thead><tr><th>ID</th><th>动作</th><th>操作者</th><th>状态</th><th>时间</th></tr></thead>
+      <tbody id="opsAuditBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="panel-ops-audit-report">
+    <h3 class="section-title">合规报告</h3>
+    <table>
+      <thead><tr><th>状态</th><th>数量</th></tr></thead>
+      <tbody id="opsAuditReportBody"></tbody>
+    </table>
+  </section>
+
+  </div>
 
   <script>
+<<<<<<< HEAD
     const $ = (id) => document.getElementById(id);
     const state = {
       apiBase: 'http://localhost:8080',
@@ -416,6 +614,25 @@
       limit: 200,
       offset: 0,
     };
+=======
+    const tabs = [
+      { id: 'users', label: '用户' },
+      { id: 'transactions', label: '财务' },
+      { id: 'warnings', label: '预警' },
+      { id: 'map', label: '地图' },
+      { id: 'residents', label: '村民' },
+      { id: 'industry', label: '产业' },
+      { id: 'ai', label: 'AI记录' },
+      { id: 'ops-monitor', label: '运维监控' },
+      { id: 'ops-health', label: '健康检查' },
+      { id: 'ops-logs', label: '日志中心' },
+      { id: 'ops-log-report', label: '日志报告' },
+      { id: 'ops-backups', label: '备份任务' },
+      { id: 'ops-restores', label: '恢复操作' },
+      { id: 'ops-audit', label: '审计查询' },
+      { id: 'ops-audit-report', label: '合规报告' }
+    ];
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
 
     const tableLabels = {
       users: '账号信息',
@@ -475,6 +692,7 @@
       return tableLabels[table] || table;
     }
 
+<<<<<<< HEAD
     function getColumnLabel(table, column){
       const direct = columnLabels[table] && columnLabels[table][column];
       if (direct) return direct;
@@ -544,6 +762,48 @@
       };
       return common[column] || column;
     }
+=======
+    const rootLogin = document.getElementById('root-login');
+    const appRoot = document.getElementById('app-root');
+    const rootError = document.getElementById('root-error');
+    const rootCodeInput = document.getElementById('rootCode');
+
+    function showRootLogin(){
+      rootLogin.style.display = 'flex'; // Show root login by default
+      appRoot.style.display = 'none';
+      rootError.textContent = '';
+      rootCodeInput.value = '';
+      rootCodeInput.focus();
+    }
+
+    function hideRootLogin(){
+      rootLogin.style.display = 'none';
+      appRoot.style.display = 'block'; // Hide app until validated
+    }
+
+    document.getElementById('root-enter').onclick = () => {
+      if (rootCodeInput.value === 'lydlg') {
+        sessionStorage.setItem('root-ok', '1');
+        hideRootLogin();
+        refreshAllBtn.onclick();
+      } else {
+        rootError.textContent = 'root 码错误';
+      }
+    };
+    document.getElementById('root-cancel').onclick = () => {
+      rootError.textContent = '已关闭，请重新打开页面';
+    };
+
+    tabs.forEach((t, idx) => {
+      const btn = document.createElement('div');
+      btn.className = 'tab' + (idx === 0 ? ' active' : '');
+      btn.dataset.tab = t.id;
+      btn.textContent = t.label;
+      btn.onclick = () => setActive(t.id);
+      tabsContainer.appendChild(btn);
+    });
+    setActive('users');
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
 
     function api(path){
       return state.apiBase.replace(/\/$/, '') + path;
@@ -736,10 +996,28 @@
         const editBtn = document.createElement('button');
         editBtn.className = 'secondary';
         editBtn.textContent = '编辑';
+<<<<<<< HEAD
         editBtn.disabled = !hasSinglePk || r[pkCol] == null || r[pkCol] === '';
         editBtn.onclick = () => openModal('编辑', r, { readOnly: false });
         actionTd.appendChild(editBtn);
 
+=======
+        editBtn.onclick = async () => {
+          const name = prompt('姓名', u.name);
+          if (name === null) return;
+          const role = prompt('角色(管理员/普通用户)', u.role || '普通用户');
+          if (role === null) return;
+          const username = prompt('用户名', u.username || '');
+          if (username === null) return;
+          const password = prompt('密码（留空不修改）', '');
+          if (password === null) return;
+          const payload = { name, role, plainPassword: 'true' };
+          if (username.trim() !== '') payload.username = username.trim();
+          if (password.trim() !== '') payload.password = password;
+          await request(`/api/users/${u.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+          await loadUsers();
+        };
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
         const delBtn = document.createElement('button');
         delBtn.className = 'danger';
         delBtn.textContent = '删除';
@@ -778,6 +1056,7 @@
       setStatus(`字段结构已加载：${state.currentTable}`, `字段数：${state.columns.length}`);
     }
 
+<<<<<<< HEAD
     async function loadRows(){
       if (!state.currentTable) return;
       state.limit = Number($('limit').value || 200) || 200;
@@ -792,6 +1071,100 @@
         `已加载 ${state.rows.length} 行（起始=${state.offset}，每页=${state.limit}）`,
         `总行数：${state.total}`
       );
+=======
+    async function loadMap() {
+      const meta = document.getElementById('mapMeta');
+      const mapName = document.getElementById('mapName');
+      const mapContent = document.getElementById('mapContent');
+      meta.textContent = '';
+      const data = await request('/api/map');
+      if (!data) return;
+      mapName.value = data.name || '';
+      mapContent.value = data.content || '';
+      if (data.updated_at || data.created_at) {
+        meta.textContent = `更新时间：${data.updated_at || data.created_at}，类型：SVG`;
+      }
+    }
+
+    async function loadResidents() {
+      const body = document.getElementById('residentsBody');
+      body.innerHTML = '';
+      const list = await request('/api/residents');
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.id}</td><td>${r.name || ''}</td><td>${r.address || ''}</td><td>${r.phone || ''}</td><td>${r.x ?? ''}</td><td>${r.y ?? ''}</td>`;
+        const actionTd = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'row-actions';
+        const editBtn = document.createElement('button');
+        editBtn.className = 'secondary';
+        editBtn.textContent = '编辑';
+        editBtn.onclick = async () => {
+          const name = prompt('姓名', r.name || '');
+          if (name === null) return;
+          const address = prompt('地址', r.address || '');
+          if (address === null) return;
+          const phone = prompt('电话', r.phone || '');
+          if (phone === null) return;
+          const x = prompt('X 坐标', r.x ?? '');
+          if (x === null) return;
+          const y = prompt('Y 坐标', r.y ?? '');
+          if (y === null) return;
+          await request(`/api/residents/${r.id}`, { method: 'PUT', body: JSON.stringify({ name, address, phone, x, y }) });
+          await loadResidents();
+        };
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '删除';
+        delBtn.onclick = async () => {
+          if (!confirm('确认删除该村民点？')) return;
+          await request(`/api/residents/${r.id}`, { method: 'DELETE' });
+          await loadResidents();
+        };
+        wrap.append(editBtn, delBtn);
+        actionTd.appendChild(wrap);
+        tr.appendChild(actionTd);
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadMetrics() {
+      const body = document.getElementById('metricBody');
+      body.innerHTML = '';
+      const list = await request('/api/industry/metrics');
+      list.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${m.id}</td><td>${m.name}</td><td>${m.value}</td><td>${m.unit}</td><td>${m.updated_at || ''}</td>`;
+        const actionTd = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'row-actions';
+        const editBtn = document.createElement('button');
+        editBtn.className = 'secondary';
+        editBtn.textContent = '编辑';
+        editBtn.onclick = async () => {
+          const name = prompt('名称', m.name);
+          if (name === null) return;
+          const value = prompt('数值', m.value);
+          if (value === null) return;
+          const unit = prompt('单位', m.unit);
+          if (unit === null) return;
+          await request(`/api/industry/metrics/${m.id}`, { method: 'PUT', body: JSON.stringify({ name, value, unit }) });
+          await loadMetrics();
+        };
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '删除';
+        delBtn.onclick = async () => {
+          if (!confirm('确认删除该指标？')) return;
+          await request(`/api/industry/metrics/${m.id}`, { method: 'DELETE' });
+          await loadMetrics();
+        };
+        wrap.append(editBtn, delBtn);
+        actionTd.appendChild(wrap);
+        tr.appendChild(actionTd);
+        body.appendChild(tr);
+      });
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
     }
 
     async function selectTable(table){
@@ -807,6 +1180,7 @@
       }
     }
 
+<<<<<<< HEAD
     function openModal(mode, row, { readOnly }){
       const modal = $('modal');
       $('modalTitle').textContent = `${mode}：${state.currentTable}`;
@@ -859,6 +1233,104 @@
       modal.style.display = 'none';
       modal.onclick = null;
     }
+=======
+    async function loadOpsMonitor() {
+      const body = document.getElementById('opsMonitorBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/monitor');
+      list.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${m.id}</td><td>${m.metric || ''}</td><td>${m.value || ''}</td><td>${m.status || ''}</td><td>${m.created_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsHealth() {
+      const body = document.getElementById('opsHealthBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/health');
+      list.forEach(h => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${h.id}</td><td>${h.service || ''}</td><td>${h.status || ''}</td><td>${h.detail || ''}</td><td>${h.checked_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsLogs() {
+      const body = document.getElementById('opsLogsBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/logs');
+      list.forEach(l => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${l.id}</td><td>${l.level || ''}</td><td>${l.source || ''}</td><td>${l.message || ''}</td><td>${l.created_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsLogReport() {
+      const body = document.getElementById('opsLogReportBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/logs/report');
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.level || ''}</td><td>${r.count ?? ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsBackups() {
+      const body = document.getElementById('opsBackupsBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/backups');
+      list.forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${b.id}</td><td>${b.target || ''}</td><td>${b.type || ''}</td><td>${b.status || ''}</td><td>${b.operator || ''}</td><td>${b.started_at || ''}</td><td>${b.finished_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsRestores() {
+      const body = document.getElementById('opsRestoresBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/restores');
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.id}</td><td>${r.backup_id || ''}</td><td>${r.status || ''}</td><td>${r.operator || ''}</td><td>${r.started_at || ''}</td><td>${r.finished_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsAudit() {
+      const body = document.getElementById('opsAuditBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/audit');
+      list.forEach(o => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${o.id}</td><td>${o.action || ''}</td><td>${o.actor || ''}</td><td>${o.status || ''}</td><td>${o.created_at || ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadOpsAuditReport() {
+      const body = document.getElementById('opsAuditReportBody');
+      body.innerHTML = '';
+      const list = await request('/api/ops/audit/report');
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.status || ''}</td><td>${r.count ?? ''}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    document.getElementById('addUser').onclick = async () => {
+      const name = document.getElementById('userName').value;
+      const role = document.getElementById('userRole').value;
+      const username = document.getElementById('userUsername').value;
+      const password = document.getElementById('userPassword').value;
+      await request('/api/users', { method: 'POST', body: JSON.stringify({ name, role, username, password, plainPassword: 'true' }) });
+      await loadUsers();
+    };
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
 
     function openInsertModal(){
       const empty = {};
@@ -903,6 +1375,7 @@
       modal.onclick = (e) => { if (e.target === modal) closeModal(); };
     }
 
+<<<<<<< HEAD
     $('apiBase').addEventListener('change', () => { state.apiBase = $('apiBase').value.trim() || 'http://localhost:8080'; });
     $('reload').onclick = async () => {
       state.apiBase = $('apiBase').value.trim() || 'http://localhost:8080';
@@ -924,12 +1397,57 @@
         showToast('刷新失败：' + err.message);
         setStatus('刷新失败', err.message);
       }
+=======
+    document.getElementById('loadMap').onclick = loadMap;
+
+    const mapSvgFileInput = document.getElementById('mapSvgFile');
+    const importSvgBtn = document.getElementById('importSvg');
+
+    async function handleSvgFile(file) {
+      if (!file) return;
+      const text = await file.text();
+      document.getElementById('mapContent').value = text;
+    }
+
+    importSvgBtn.onclick = () => {
+      mapSvgFileInput.click();
+    };
+
+    mapSvgFileInput.addEventListener('change', async () => {
+      await handleSvgFile(mapSvgFileInput.files && mapSvgFileInput.files[0]);
+    });
+
+    document.getElementById('saveMap').onclick = async () => {
+      const name = document.getElementById('mapName').value || '主目录地图';
+      const content = document.getElementById('mapContent').value;
+      await request('/api/map', { method: 'POST', body: JSON.stringify({ name, type: 'svg', content }) });
+      await loadMap();
+    };
+
+    document.getElementById('addResident').onclick = async () => {
+      const name = document.getElementById('residentName').value;
+      const address = document.getElementById('residentAddress').value;
+      const phone = document.getElementById('residentPhone').value;
+      const x = document.getElementById('residentX').value;
+      const y = document.getElementById('residentY').value;
+      await request('/api/residents', { method: 'POST', body: JSON.stringify({ name, address, phone, x, y }) });
+      await loadResidents();
+    };
+
+    document.getElementById('addMetric').onclick = async () => {
+      const name = document.getElementById('metricName').value;
+      const value = document.getElementById('metricValue').value;
+      const unit = document.getElementById('metricUnit').value;
+      await request('/api/industry/metrics', { method: 'POST', body: JSON.stringify({ name, value, unit }) });
+      await loadMetrics();
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
     };
     $('logout').onclick = () => {
       state.token = '';
       localStorage.removeItem('dbEditorRootToken');
       showLoginView('已退出管理员');
     };
+<<<<<<< HEAD
     $('tableFilter').addEventListener('input', renderTableList);
     $('loadRows').onclick = loadRows;
     $('prevPage').onclick = async () => {
@@ -937,6 +1455,69 @@
       const offset = Math.max(0, (Number($('offset').value || 0) || 0) - limit);
       $('offset').value = String(offset);
       await loadRows();
+=======
+
+    document.getElementById('addOpsMetric').onclick = async () => {
+      const metric = document.getElementById('opsMetric').value;
+      const value = document.getElementById('opsValue').value;
+      const status = document.getElementById('opsStatus').value;
+      await request('/api/ops/monitor', { method: 'POST', body: JSON.stringify({ metric, value, status }) });
+      await loadOpsMonitor();
+    };
+
+    document.getElementById('addOpsHealth').onclick = async () => {
+      const service = document.getElementById('opsService').value;
+      const status = document.getElementById('opsHealthStatus').value;
+      const detail = document.getElementById('opsDetail').value;
+      await request('/api/ops/health', { method: 'POST', body: JSON.stringify({ service, status, detail }) });
+      await loadOpsHealth();
+    };
+
+    document.getElementById('addOpsLog').onclick = async () => {
+      const level = document.getElementById('opsLogLevel').value;
+      const source = document.getElementById('opsLogSource').value;
+      const message = document.getElementById('opsLogMessage').value;
+      await request('/api/ops/logs', { method: 'POST', body: JSON.stringify({ level, source, message }) });
+      await loadOpsLogs();
+      await loadOpsLogReport();
+    };
+
+    document.getElementById('addOpsBackup').onclick = async () => {
+      const target = document.getElementById('opsBackupTarget').value;
+      const type = document.getElementById('opsBackupType').value;
+      const operator = document.getElementById('opsBackupOperator').value;
+      await request('/api/ops/backups', { method: 'POST', body: JSON.stringify({ target, type, operator }) });
+      await loadOpsBackups();
+    };
+
+    document.getElementById('addOpsRestore').onclick = async () => {
+      const backup_id = document.getElementById('opsRestoreBackupId').value;
+      const operator = document.getElementById('opsRestoreOperator').value;
+      await request('/api/ops/restores', { method: 'POST', body: JSON.stringify({ backup_id, operator }) });
+      await loadOpsRestores();
+    };
+
+    document.getElementById('refreshAi').onclick = loadAiRecords;
+
+    refreshAllBtn.onclick = async () => {
+      await Promise.all([
+        loadUsers(),
+        loadTransactions(),
+        loadWarnings(),
+        loadMap(),
+        loadResidents(),
+        loadMetrics(),
+        loadAiRecords(),
+        loadOpsMonitor(),
+        loadOpsHealth(),
+        loadOpsLogs(),
+        loadOpsLogReport(),
+        loadOpsBackups(),
+        loadOpsRestores(),
+        loadOpsAudit(),
+        loadOpsAuditReport()
+      ]);
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
     };
     $('nextPage').onclick = async () => {
       const limit = Number($('limit').value || 200) || 200;
@@ -963,6 +1544,7 @@
     });
 
     (async () => {
+<<<<<<< HEAD
       state.apiBase = $('apiBase').value.trim() || 'http://localhost:8080';
       if (!state.token) { showLoginView(); return; }
       try{
@@ -973,6 +1555,17 @@
         state.token = '';
         localStorage.removeItem('dbEditorRootToken');
         showLoginView('请先登录管理员');
+=======
+      try {
+        if (sessionStorage.getItem('root-ok') === '1') {
+          hideRootLogin();
+          await refreshAllBtn.onclick();
+        } else {
+          showRootLogin();
+        }
+      } catch (err) {
+        alert('加载失败：' + err.message);
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
       }
     })();
   </script>

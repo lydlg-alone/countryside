@@ -1,6 +1,10 @@
 @echo off
 chcp 65001 >nul
+<<<<<<< HEAD
 setlocal EnableExtensions
+=======
+setlocal
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
 pushd %~dp0
 set BASEDIR=%CD%
 set JAVA_HOME=
@@ -77,6 +81,7 @@ set DB_NAME=village_db
 set DB_USER=village
 set DB_PASS=villagepass
 
+<<<<<<< HEAD
 set "JAR_DIR=%BASEDIR%\village-admin-system\target"
 set "JAR="
 for /f "delims=" %%f in ('dir /b /a-d /o-d "%JAR_DIR%\village-admin-system-*.jar" 2^>nul ^| findstr /v /i "original-"') do (
@@ -85,9 +90,16 @@ for /f "delims=" %%f in ('dir /b /a-d /o-d "%JAR_DIR%\village-admin-system-*.jar
 )
 :found_jar
 if not defined JAR (
+=======
+set JAR=%BASEDIR%\village-admin-system\target\village-admin-system-0.1.0-SNAPSHOT-shaded.jar
+if not exist "%JAR%" (
+  set JAR=%BASEDIR%\village-admin-system\target\village-admin-system-0.1.0-SNAPSHOT.jar
+)
+if not exist "%JAR%" (
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
   echo [ERROR] 未找到后端 Jar，请先构建：
   echo mvn -f "%BASEDIR%\village-admin-system\pom.xml" package -DskipTests
-  exit /b 1
+  call :fail
 )
 
 echo [INFO] 停止旧后端...
@@ -104,6 +116,7 @@ powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $
   echo JAR=%JAR%
 )
 
+<<<<<<< HEAD
 echo [INFO] 启动后端...
 echo [INFO] 后端将前台运行，关闭窗口会停止服务
 echo [INFO] 后端日志：runtime\logs\app.log
@@ -111,5 +124,24 @@ echo [INFO] 启动信息：runtime\logs\start-debug.txt
 echo [INFO] 后端地址：http://localhost:8080
 echo [INFO] 前端请手动打开：frontend\index.html
 powershell -NoProfile -Command "& '%JAVA_HOME%\bin\java.exe' -jar '%JAR%' 2>&1 | Tee-Object -FilePath '%APP_OUT%'"
+=======
+echo([INFO] 启动后端...
+echo([INFO] 后端将前台运行，关闭窗口会停止服务
+echo([INFO] 标准输出日志: runtime\logs\app.log
+echo([INFO] 错误日志: runtime\logs\app.err
+echo([INFO] 启动信息: runtime\logs\start-debug.txt
+echo([INFO] 后端已启动: http://localhost:8080
+echo([INFO] 前端请手动打开: frontend\index.html
+"%JAVA_EXE%" -jar "%JAR%" 1>>"%APP_OUT%" 2>>"%APP_ERR%"
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
 popd
 endlocal
+
+goto :eof
+
+:fail
+echo.
+echo [INFO] 请修复上述问题后重试
+:fail_wait
+pause
+goto fail_wait

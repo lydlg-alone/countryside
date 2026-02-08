@@ -459,8 +459,15 @@
         .login-box .form-group{margin-bottom:12px;}
         .login-box label{display:block;margin-bottom:6px;font-weight:600;color:#4a5568;}
         .login-box input{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;}
+<<<<<<< HEAD
         .login-box .captcha-row{display:flex;gap:8px;align-items:center;}
         .login-box #captcha-canvas{width:120px;height:38px;border:1px solid #ddd;border-radius:4px;cursor:pointer;user-select:none;}
+=======
+        .login-meta{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#6b7280;}
+        .captcha-row{display:flex;gap:8px;align-items:center;}
+        .captcha-row img{height:36px;border:1px solid #e5e7eb;border-radius:4px;background:#fff;}
+        .captcha-row button{white-space:nowrap;}
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
     </style>
 </head>
 <body>
@@ -479,9 +486,17 @@
                 <div class="form-group">
                     <label>验证码</label>
                     <div class="captcha-row">
+<<<<<<< HEAD
                         <input name="captcha" type="text" placeholder="输入图形数字" required>
                         <canvas id="captcha-canvas" width="120" height="38" title="点击刷新验证码"></canvas>
                     </div>
+=======
+                        <input name="captcha" type="text" placeholder="请输入验证码" required>
+                        <img id="captcha-img" alt="验证码" />
+                        <button type="button" class="btn btn-secondary" id="captcha-refresh">换一张</button>
+                    </div>
+                    <div class="login-meta">密码将使用加密算法校验</div>
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">登录</button>
@@ -1434,7 +1449,7 @@
         const mapScaleText = document.getElementById('map-scale-text');
         const mapHint = document.getElementById('map-hint');
         const mapCanvas = document.querySelector('.map-canvas');
-        const ONLINE_MAP_URL = 'https://geo.datav.aliyun.com/areas_v3/bound/430302.json';
+        const LOCAL_SVG_URL = '../地图.svg';
         const MAP_MIN_SCALE = 0.5;
         const MAP_MAX_SCALE = 20;
         const RESIDENT_VISIBLE_SCALE = 4.0;
@@ -1480,65 +1495,44 @@
             updateMapLayerInfo();
         }
 
-        function renderGeoJson(geo){
+        function renderSvgMap(svgText){
             if(!mapSvg) return;
             mapSvg.setAttribute('viewBox', '0 0 1000 600');
             mapSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
             mapSvg.innerHTML = '';
             mapLabels = [];
-            if(!geo || geo.type !== 'FeatureCollection'){
+            if(!svgText || typeof svgText !== 'string'){
                 mapSvg.innerHTML = '<text x="20" y="30" fill="#999">未找到地图数据</text>';
                 return;
             }
-            const paths = [];
-            let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-            geo.features.forEach(f=>{
-                const g = f.geometry;
-                const coordsList = g.type === 'Polygon' ? [g.coordinates] : (g.type === 'MultiPolygon' ? g.coordinates : []);
-                coordsList.forEach(poly=>{
-                    poly.forEach(ring=>{
-                        ring.forEach(([x,y])=>{
-                            minX = Math.min(minX,x); minY = Math.min(minY,y);
-                            maxX = Math.max(maxX,x); maxY = Math.max(maxY,y);
-                        });
-                    });
-                });
-            });
-            const width = Math.max(maxX-minX,1);
-            const height = Math.max(maxY-minY,1);
-            const scaleX = 1000/width; const scaleY = 600/height;
-            geo.features.forEach(f=>{
-                const g = f.geometry;
-                const coordsList = g.type === 'Polygon' ? [g.coordinates] : (g.type === 'MultiPolygon' ? g.coordinates : []);
-                coordsList.forEach(poly=>{
-                    poly.forEach(ring=>{
-                        const d = ring.map(([x,y],i)=>{
-                            const px = (x-minX)*scaleX;
-                            const py = 600 - (y-minY)*scaleY;
-                            return `${i===0?'M':'L'}${px},${py}`;
-                        }).join(' ') + ' Z';
-                        paths.push(`<path d="${d}" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>`);
-                    });
-                });
-            });
-            mapSvg.innerHTML = paths.join('');
-
-            const labelFragments = [];
-            geo.features.forEach(f=>{
-                const props = f.properties || {};
-                const name = props.name || '区域';
-                const center = props.center || props.centroid;
-                if (!center || center.length < 2) return;
-                const px = (center[0]-minX)*scaleX;
-                const py = 600 - (center[1]-minY)*scaleY;
-                labelFragments.push(`<text class="map-label" x="${px}" y="${py}" text-anchor="middle">${name}</text>`);
-            });
-            if (labelFragments.length){
-                mapSvg.innerHTML += labelFragments.join('');
-                mapLabels = Array.from(mapSvg.querySelectorAll('.map-label'));
-                const showLabels = mapScale >= 1.2;
-                mapLabels.forEach(el => el.classList.toggle('hidden', !showLabels));
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgText, 'image/svg+xml');
+            const svgEl = doc.documentElement;
+            if (!svgEl || svgEl.nodeName.toLowerCase() !== 'svg'){
+                mapSvg.innerHTML = '<text x="20" y="30" fill="#999">SVG 数据解析失败</text>';
+                return;
             }
+            const viewBox = svgEl.getAttribute('viewBox');
+            const widthAttr = svgEl.getAttribute('width');
+            const heightAttr = svgEl.getAttribute('height');
+            if (viewBox){
+                mapSvg.setAttribute('viewBox', viewBox);
+            } else if (widthAttr && heightAttr) {
+                const w = parseFloat(widthAttr);
+                const h = parseFloat(heightAttr);
+                if (!Number.isNaN(w) && !Number.isNaN(h)){
+                    mapSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                } else {
+                    mapSvg.setAttribute('viewBox', '0 0 1000 600');
+                }
+            } else {
+                mapSvg.setAttribute('viewBox', '0 0 1000 600');
+            }
+            mapSvg.setAttribute('preserveAspectRatio', svgEl.getAttribute('preserveAspectRatio') || 'xMidYMid meet');
+            mapSvg.innerHTML = svgEl.innerHTML;
+            mapLabels = Array.from(mapSvg.querySelectorAll('.map-label'));
+            const showLabels = mapScale >= 1.2;
+            mapLabels.forEach(el => el.classList.toggle('hidden', !showLabels));
         }
 
         function renderSvgText(svgText){
@@ -1725,16 +1719,16 @@
             let mapError = '';
             let residentsError = '';
             try{
-                const dbMapRes = await fetch(API_BASE + '/api/map', {cache:'no-store'}).catch(()=>null);
-                if (dbMapRes && dbMapRes.ok) {
-                    mapData = await dbMapRes.json();
-                }
-                if (!mapData || !mapData.content) {
-                    const onlineRes = await fetch(ONLINE_MAP_URL, {cache:'no-store'}).catch(()=>null);
-                    if (onlineRes && onlineRes.ok) {
-                        mapData = await onlineRes.json();
+                const localSvgRes = await fetch(LOCAL_SVG_URL, {cache:'no-store'}).catch(()=>null);
+                if (localSvgRes && localSvgRes.ok) {
+                    const svgText = await localSvgRes.text();
+                    mapData = { type: 'svg', content: svgText };
+                } else {
+                    const dbMapRes = await fetch(API_BASE + '/api/map', {cache:'no-store'}).catch(()=>null);
+                    if (dbMapRes && dbMapRes.ok) {
+                        mapData = await dbMapRes.json();
                     } else {
-                        mapError = onlineRes ? `在线地图返回 ${onlineRes.status}` : '在线地图请求失败';
+                        mapError = localSvgRes ? `本地地图返回 ${localSvgRes.status}` : '本地地图请求失败';
                     }
                 }
                 try{
@@ -1744,6 +1738,7 @@
                 } catch(e){
                     residentsError = '居民接口请求失败';
                 }
+<<<<<<< HEAD
                 let geo = null;
                 if (mapData && mapData.type) {
                     geo = mapData;
@@ -1766,11 +1761,15 @@
                     try { geo = JSON.parse(contentText || '{}'); } catch(e) { geo = null; }
                 }
                 if (!geo){
+=======
+                const contentText = mapData && typeof mapData.content === 'string' ? mapData.content : '';
+                if (!contentText.trim().toLowerCase().startsWith('<svg')){
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
                     if(mapSvg) mapSvg.innerHTML = '<text x="20" y="30" fill="#999">地图数据解析失败</text>';
-                    if(mapHint) mapHint.textContent = mapError || '地图数据解析失败，请确认后端返回内容';
+                    if(mapHint) mapHint.textContent = mapError || '地图数据解析失败，请确认 SVG 内容';
                     return;
                 }
-                renderGeoJson(geo);
+                renderSvgMap(contentText);
                 renderResidents(residents || []);
                 if(mapHint) {
                     if (mapError || residentsError) {
@@ -1906,9 +1905,12 @@
         const appPage = document.getElementById('app-page');
         const loginForm = document.getElementById('login-form');
         const loginError = document.getElementById('login-error');
+        const captchaImg = document.getElementById('captcha-img');
+        const captchaRefreshBtn = document.getElementById('captcha-refresh');
         const userNameEl = document.querySelector('.user-name');
         const userRoleEl = document.querySelector('.user-role');
         const userAreaEl = document.getElementById('user-area');
+<<<<<<< HEAD
         const captchaCanvas = document.getElementById('captcha-canvas');
         const captchaInput = loginForm?.querySelector('input[name="captcha"]');
         let captchaCode = '';
@@ -1948,11 +1950,32 @@
 
         refreshCaptcha();
         captchaCanvas?.addEventListener('click', refreshCaptcha);
+=======
+        let captchaToken = '';
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
 
-        async function doLogin(username, password){
+        async function refreshCaptcha(){
+            try{
+                const r = await fetch(API_BASE + '/api/auth/captcha', {cache:'no-store'});
+                if(!r.ok) throw new Error('captcha failed');
+                const data = await r.json();
+                captchaToken = data.token || '';
+                if (captchaImg && data.image){
+                    captchaImg.src = 'data:image/png;base64,' + data.image;
+                }
+            }catch(err){
+                captchaToken = '';
+                if (captchaImg){
+                    captchaImg.removeAttribute('src');
+                    captchaImg.alt = '验证码加载失败';
+                }
+            }
+        }
+
+        async function doLogin(username, password, captchaCode){
             loginError.textContent = '';
             try{
-                const r = await fetch(API_BASE + '/api/auth/login', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({username, password})});
+                const r = await fetch(API_BASE + '/api/auth/login', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({username, password, captchaToken, captchaCode})});
                 if(!r.ok){
                     const msg = await r.text();
                     throw new Error(msg || '登录失败');
@@ -1970,12 +1993,16 @@
             }catch(err){
                 loginError.textContent = '登录失败，请检查账号或密码';
                 refreshCaptcha();
+<<<<<<< HEAD
                 if(captchaInput) captchaInput.value = '';
+=======
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
             }
         }
 
         loginForm.addEventListener('submit', (e)=>{
             e.preventDefault();
+<<<<<<< HEAD
             if(captchaInput){
                 const v = captchaInput.value.trim();
                 if(!v || v !== captchaCode){
@@ -1987,7 +2014,13 @@
                 }
             }
             doLogin(loginForm.username.value, loginForm.password.value);
+=======
+            doLogin(loginForm.username.value, loginForm.password.value, loginForm.captcha.value);
+>>>>>>> 3a01a2e11c406534f45cd83922e505d01c297aaa
         });
+
+        captchaRefreshBtn?.addEventListener('click', refreshCaptcha);
+        refreshCaptcha();
 
         // 持久化登录状态
         const savedToken = localStorage.getItem('token');
