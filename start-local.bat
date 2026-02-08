@@ -97,13 +97,16 @@ if not exist "%JAR%" (
   echo JAR=%JAR%
 )
 
-echo([INFO] 启动后端...
-echo([INFO] 后端将前台运行，关闭窗口会停止服务
-echo([INFO] 标准输出日志: runtime\logs\app.log
-echo([INFO] 错误日志: runtime\logs\app.err
-echo([INFO] 启动信息: runtime\logs\start-debug.txt
-echo([INFO] 后端已启动: http://localhost:8080
-echo([INFO] 前端请手动打开: frontend\index.html
+echo [INFO] 停止旧后端...
+powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*village-admin-system-0.1.0-SNAPSHOT*jar*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>nul
+
+echo [INFO] Starting backend...
+echo [INFO] Backend runs in foreground. Closing window stops service.
+echo [INFO] Stdout log: runtime\logs\app.log
+echo [INFO] Stderr log: runtime\logs\app.err
+echo [INFO] Start info: runtime\logs\start-debug.txt
+echo [INFO] Backend URL: http://localhost:8080
+echo [INFO] Open frontend\index.html
 "%JAVA_EXE%" -jar "%JAR%" 1>>"%APP_OUT%" 2>>"%APP_ERR%"
 popd
 endlocal

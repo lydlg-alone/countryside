@@ -7,4 +7,48 @@ The last packet sent successfully to the server was 0 milliseconds ago. The driv
 DB init failed: Communications link failure
 
 The last packet sent successfully to the server was 0 milliseconds ago. The driver has not received any packets from the server.
-^C^C^C
+^C^C^C^C^C二月 08, 2026 8:44:06 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1
+二月 08, 2026 8:44:08 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1
+二月 08, 2026 8:48:50 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1
+二月 08, 2026 8:49:08 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1
+二月 08, 2026 8:49:10 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1
+二月 08, 2026 8:49:15 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1
+^CException in thread "Thread-2" java.lang.NoClassDefFoundError: com/mysql/cj/QueryBindings
+	at com.mysql.cj.jdbc.ConnectionImpl.clientPrepareStatement(ConnectionImpl.java:667)
+	at com.mysql.cj.jdbc.ConnectionImpl.prepareStatement(ConnectionImpl.java:1617)
+	at com.mysql.cj.jdbc.ConnectionImpl.prepareStatement(ConnectionImpl.java:1535)
+	at org.village.system.Application.handleAiRecords(Application.java:1773)
+	at org.village.system.Application.lambda$main$17(Application.java:94)
+	at com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:79)
+	at sun.net.httpserver.AuthFilter.doFilter(AuthFilter.java:83)
+	at com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:82)
+	at sun.net.httpserver.ServerImpl$Exchange$LinkHandler.handle(ServerImpl.java:822)
+	at com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:79)
+	at sun.net.httpserver.ServerImpl$Exchange.run(ServerImpl.java:794)
+	at sun.net.httpserver.ServerImpl$DefaultExecutor.execute(ServerImpl.java:199)
+	at sun.net.httpserver.ServerImpl$Dispatcher.handle(ServerImpl.java:544)
+	at sun.net.httpserver.ServerImpl$Dispatcher.run(ServerImpl.java:509)
+	at java.lang.Thread.run(Thread.java:750)
+Caused by: java.lang.ClassNotFoundException: com.mysql.cj.QueryBindings
+	at java.net.URLClassLoader.findClass(URLClassLoader.java:387)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:418)
+	at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:352)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:351)
+	... 15 more
+二月 08, 2026 9:04:13 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1
+^C^CDB init failed: Communications link failure
+
+The last packet sent successfully to the server was 0 milliseconds ago. The driver has not received any packets from the server.
+二月 08, 2026 9:09:35 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1
+二月 08, 2026 9:09:41 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1
+二月 08, 2026 9:09:44 上午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: rCode = 204: forcing contentLen = -1

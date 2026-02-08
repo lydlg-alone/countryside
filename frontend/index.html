@@ -656,29 +656,7 @@
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>2024-01-29 14:30</td>
-                                <td>预警信息</td>
-                                <td>后山区域温度异常升高</td>
-                                <td><span class="status-badge status-warning">待处理</span></td>
-                                <td><button class="btn btn-primary">查看</button></td>
-                            </tr>
-                            <tr>
-                                <td>2024-01-29 13:45</td>
-                                <td>村民反馈</td>
-                                <td>道路损坏需要维修</td>
-                                <td><span class="status-badge status-pending">处理中</span></td>
-                                <td><button class="btn btn-primary">处理</button></td>
-                            </tr>
-                            <tr>
-                                <td>2024-01-29 10:20</td>
-                                <td>任务完成</td>
-                                <td>春季植树活动已完成</td>
-                                <td><span class="status-badge status-completed">已完成</span></td>
-                                <td><button class="btn btn-secondary">详情</button></td>
-                            </tr>
-                        </tbody>
+                        <tbody id="dashboard-events"></tbody>
                     </table>
                 </div>
                 
@@ -1402,8 +1380,9 @@
         </div>
     </div>
 
+    <script src="./config.js"></script>
     <script>
-        const API_BASE = 'http://localhost:8080';
+        const API_BASE = (window.API_BASE ?? '');
 
         // 导航项点击效果
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -1425,6 +1404,7 @@
                 document.getElementById(moduleId).classList.add('active');
                 if (moduleId === 'home') {
                     loadMapData();
+                    loadDashboardEvents();
                 }
             });
         });
@@ -1728,6 +1708,72 @@
             setMapScale(1);
         });
 
+        function statusBadge(status){
+            const text = status || '未知';
+            let cls = 'status-pending';
+            if (text.includes('完成') || text.includes('已完成') || text.includes('成功')) cls = 'status-completed';
+            if (text.includes('待处理') || text.includes('异常') || text.includes('高')) cls = 'status-warning';
+            return `<span class="status-badge ${cls}">${text}</span>`;
+        }
+
+        async function loadDashboardEvents(){
+            const body = document.getElementById('dashboard-events');
+            if (!body) return;
+            body.innerHTML = '';
+            const rows = [];
+            try{
+                const [warningsRes, feedbackRes, tasksRes] = await Promise.all([
+                    fetch(API_BASE + '/api/warnings/events', {cache:'no-store'}).catch(()=>null),
+                    fetch(API_BASE + '/api/feedback/items', {cache:'no-store'}).catch(()=>null),
+                    fetch(API_BASE + '/api/gov/tasks', {cache:'no-store'}).catch(()=>null)
+                ]);
+                if (warningsRes && warningsRes.ok){
+                    const list = await warningsRes.json();
+                    (list || []).forEach(w => {
+                        rows.push({
+                            time: w.triggered_at || '',
+                            type: '预警信息',
+                            desc: w.msg || w.title || '',
+                            status: w.status || '待处理',
+                            action: '查看'
+                        });
+                    });
+                }
+                if (feedbackRes && feedbackRes.ok){
+                    const list = await feedbackRes.json();
+                    (list || []).forEach(f => {
+                        rows.push({
+                            time: f.created_at || '',
+                            type: '村民反馈',
+                            desc: f.title || f.content || '',
+                            status: f.status || '处理中',
+                            action: '处理'
+                        });
+                    });
+                }
+                if (tasksRes && tasksRes.ok){
+                    const list = await tasksRes.json();
+                    (list || []).forEach(t => {
+                        rows.push({
+                            time: t.created_at || t.due_at || '',
+                            type: '任务',
+                            desc: t.title || t.description || '',
+                            status: t.status || '待处理',
+                            action: '详情'
+                        });
+                    });
+                }
+            }catch(err){
+                // ignore and show empty table
+            }
+            rows.sort((a,b)=> String(b.time).localeCompare(String(a.time)));
+            rows.slice(0, 10).forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${r.time || ''}</td><td>${r.type}</td><td>${r.desc}</td><td>${statusBadge(r.status)}</td><td><button class="btn btn-secondary">${r.action}</button></td>`;
+                body.appendChild(tr);
+            });
+        }
+
         if(mapCanvas){
             mapCanvas.addEventListener('wheel', (e)=>{
                 e.preventDefault();
@@ -1787,6 +1833,24 @@
         const userAreaEl = document.getElementById('user-area');
         let captchaToken = '';
 
+        async function refreshCurrentUser(){
+            const username = localStorage.getItem('userUsername');
+            if (!username) return;
+            try{
+                const r = await fetch(API_BASE + '/api/users', {cache:'no-store'});
+                if (!r.ok) return;
+                const list = await r.json();
+                const user = (list || []).find(u => u.username === username);
+                if (!user) return;
+                localStorage.setItem('userName', user.name || username);
+                localStorage.setItem('userRole', user.role || '');
+                userNameEl.textContent = user.name || username;
+                userRoleEl.textContent = user.role || '';
+            }catch(err){
+                // ignore refresh failure
+            }
+        }
+
         async function refreshCaptcha(){
             try{
                 const r = await fetch(API_BASE + '/api/auth/captcha', {cache:'no-store'});
@@ -1823,6 +1887,8 @@
                 loginPage.style.display = 'none';
                 appPage.style.display = 'flex';
                 loadMapData();
+                loadDashboardEvents();
+                refreshCurrentUser();
             }catch(err){
                 loginError.textContent = '登录失败，请检查账号或密码';
                 refreshCaptcha();
@@ -1848,6 +1914,8 @@
             loginPage.style.display = 'none';
             appPage.style.display = 'flex';
             loadMapData();
+            loadDashboardEvents();
+            refreshCurrentUser();
         }else{
             loginPage.style.display = 'flex';
             appPage.style.display = 'none';
