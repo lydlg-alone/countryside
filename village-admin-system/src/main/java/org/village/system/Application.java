@@ -1353,11 +1353,8 @@ public class Application {
         String body = readBody(ex);
         String username = extractJsonString(body,"username");
         String password = extractJsonString(body,"password");
-        String captchaToken = extractJsonString(body,"captchaToken");
-        String captchaCode = extractJsonString(body,"captchaCode");
         if (username==null || username.isEmpty()) { writeJson(ex,400,"{\"error\":\"username required\"}"); return; }
         if (password==null || password.isEmpty()) { writeJson(ex,400,"{\"error\":\"password required\"}"); return; }
-        if (!verifyCaptcha(captchaToken, captchaCode)) { writeJson(ex,401,"{\"error\":\"captcha invalid\"}"); return; }
         try (java.sql.Connection c = openConnection(); java.sql.PreparedStatement ps = c.prepareStatement("SELECT id,name,role,username,password FROM users WHERE username=? LIMIT 1")){
             ps.setString(1, username);
             java.sql.ResultSet rs = ps.executeQuery();
